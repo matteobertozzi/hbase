@@ -101,10 +101,10 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetSchemaA
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDescriptorsRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetTableDescriptorsResponse;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
-import org.apache.hadoop.hbase.snapshot.HBaseSnapshotException;
-import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.snapshot.UnknownSnapshotException;
+import org.apache.hadoop.hbase.snapshot.exception.HBaseSnapshotException;
+import org.apache.hadoop.hbase.snapshot.exception.SnapshotCreationException;
+import org.apache.hadoop.hbase.snapshot.exception.UnknownSnapshotException;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -2167,7 +2167,7 @@ public class HBaseAdmin implements Abortable, Closeable {
         .build();
     IsSnapshotDoneResponse done = IsSnapshotDoneResponse.newBuilder().buildPartial();
     long start = EnvironmentEdgeManager.currentTimeMillis();
-    long max = response.getExpectedTime();
+    long max = response.getExpectedTimeout();
     long maxPauseTime = max / this.numRetries;
     int tries = 0;
     LOG.debug("Waiting a max of " + max + " ms for snapshot to complete. (max " + maxPauseTime
@@ -2195,7 +2195,7 @@ public class HBaseAdmin implements Abortable, Closeable {
     }
     if (!done.getDone()) {
       throw new SnapshotCreationException("Snapshot '" + snapshot.getName()
-          + "' wasn't completed in expectedTime:" + max + " ms");
+          + "' wasn't completed in expectedTime:" + max + " ms", snapshot);
     }
   }
 

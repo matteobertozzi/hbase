@@ -43,9 +43,9 @@ import com.google.protobuf.RpcController;
  * Test snapshot logic from the client
  */
 @Category(SmallTests.class)
-public class TestSnapshotsFromAdmin {
+public class TestSnapshotFromAdmin {
 
-  private static final Log LOG = LogFactory.getLog(TestSnapshotsFromAdmin.class);
+  private static final Log LOG = LogFactory.getLog(TestSnapshotFromAdmin.class);
 
   /**
    * Test that the logic for doing 'correct' back-off based on exponential increase and the max-time
@@ -80,7 +80,8 @@ public class TestSnapshotsFromAdmin {
     Mockito.when(mockConnection.getConfiguration()).thenReturn(conf);
     Mockito.when(mockConnection.getKeepAliveMasterAdmin()).thenReturn(mockMaster);
     // set the max wait time for the snapshot to complete
-    TakeSnapshotResponse response = TakeSnapshotResponse.newBuilder().setExpectedTime(maxWaitTime)
+    TakeSnapshotResponse response = TakeSnapshotResponse.newBuilder()
+        .setExpectedTimeout(maxWaitTime)
         .build();
     Mockito
         .when(
