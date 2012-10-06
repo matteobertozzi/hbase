@@ -85,27 +85,17 @@ public class DisabledTableSnapshotHandler extends TableSnapshotHandler {
   protected void snapshot(List<HRegionInfo> regions) throws IOException, KeeperException {
     // 0. start the timer for taking the snapshot
     timer.start();
-    // 1. for each region, write all the info to disk
-    LOG.info("Starting to write region info and WALs for regions for offline snapshot:" + snapshot);
-    for (HRegionInfo regionInfo : regions) {
-      // 1.1 copy the regionInfo files to the snapshot
-      Path snapshotRegionDir = TakeSnapshotUtils.getRegionSnaphshotDirectory(snapshot, rootDir,
-        regionInfo.getEncodedName());
-      HRegion.writeRegioninfoOnFilesystem(regionInfo, snapshotRegionDir, fs, conf);
-      // check for error for each region
-      monitor.failOnError();
 
-      // 1.2 create references for each of the WAL files for the region
-      Path logdir = new Path(FSUtils.getRootDir(conf), HConstants.HREGION_LOGDIR_NAME);
-      FileStatus[] serverLogDirs = FSUtils.listStatus(fs, logdir, visibleDirFilter);
-      // if we have logs directories, then reference all the logs in each server directory
-      if (serverLogDirs != null) {
-        for (FileStatus serverDir : serverLogDirs) {
-          ReferenceServerWALsTask op = new ReferenceServerWALsTask(snapshot, this.monitor,
-              serverDir.getPath(), conf, fs);
-          op.run();
-          monitor.failOnError();
-        }
+    // 1. create references for each of the WAL files for the region
+    Path logdir = new Path(FSUtils.getRootDir(conf), HConstants.HREGION_LOGDIR_NAME);
+    FileStatus[] serverLogDirs = FSUtils.listStatus(fs, logdir, visibleDirFilter);
+    // if we have logs directories, then reference all the logs in each server directory
+    if (serverLogDirs != null) {
+      for (FileStatus serverDir : serverLogDirs) {
+        ReferenceServerWALsTask op = new ReferenceServerWALsTask(snapshot, this.monitor,
+            serverDir.getPath(), conf, fs);
+        op.run();
+        monitor.failOnError();
       }
     }
 
@@ -116,7 +106,19 @@ public class DisabledTableSnapshotHandler extends TableSnapshotHandler {
     tableInfo.run();
     monitor.failOnError();
 
-    // 3. reference all region directories for the table
+
+    // 3. for each region, write all the info to disk
+    LOG.info("Starting to write region info and WALs for regions for offline snapshot:" + snapshot);
+    for (HRegionInfo regionInfo : regions) {
+      // 1.1 copy the regionInfo files to the snapshot
+      Path snapshotRegionDir = TakeSnapshotUtils.getRegionSnaphshotDirectory(snapshot, rootDir,
+        regionInfo.getEncodedName());
+      HRegion.writeRegioninfoOnFilesystem(regionInfo, snapshotRegionDir, fs, conf);
+      // check for error for each region
+      monitor.failOnError();
+    }
+
+    // 4. reference all region directories for the table
     LOG.info("Starting to reference hfiles for offline snapshot:" + snapshot);
     // get the server directories
     FileStatus[] regionDirs = FSUtils.listStatus(fs, tdir, visibleDirFilter);
@@ -136,7 +138,7 @@ public class DisabledTableSnapshotHandler extends TableSnapshotHandler {
     for (FileStatus regionDir : regionDirs) {
       FileStatus[] fams = FSUtils.listStatus(fs, regionDir.getPath(), visibleDirFilter);
       // if no families, then we are done again
-      if (fams == null || fams.length == 0) continue;
+      if (fams == null) continue;
       addReferencesToHFilesInRegion(regionDir.getPath(), fams);
       monitor.failOnError();
     }
@@ -171,7 +173,7 @@ public class DisabledTableSnapshotHandler extends TableSnapshotHandler {
       FileStatus[] hfiles = FSUtils.listStatus(fs, familyDir, fileFilter);
 
       // if no hfiles, then we are done with this family
-      if (hfiles == null || hfiles.length == 0) {
+      if (hfiles == null) {
         LOG.debug("Not hfiles found for family: " + familyDir);
         continue;
       }
