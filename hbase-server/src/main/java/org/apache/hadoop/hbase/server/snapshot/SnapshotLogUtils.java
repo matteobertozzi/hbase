@@ -27,7 +27,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
+import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
@@ -104,6 +104,6 @@ public class SnapshotLogUtils {
    * @return path to the log home directory for the archive files.
    */
   public static Path getLogSnapshotDir(Path snapshotDir, String serverName) {
-    return new Path(snapshotDir, HLog.getHLogDirectoryName(serverName));
+    return new Path(snapshotDir, HLogUtil.getHLogDirectoryName(serverName));
   }
 }
