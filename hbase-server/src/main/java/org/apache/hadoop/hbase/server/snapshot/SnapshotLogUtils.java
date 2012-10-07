@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
@@ -105,5 +106,13 @@ public class SnapshotLogUtils {
    */
   public static Path getLogSnapshotDir(Path snapshotDir, String serverName) {
     return new Path(snapshotDir, HLogUtil.getHLogDirectoryName(serverName));
+  }
+
+  public static Path getRecoveredEditsDir(Path snapshotDir) {
+    return new Path(snapshotDir, '.' + HLog.RECOVERED_EDITS_DIR);
+  }
+
+  public static Path getRecoveredEditsDir(Path snapshotDir, String regionName) {
+    return new Path(getRecoveredEditsDir(snapshotDir), regionName);
   }
 }

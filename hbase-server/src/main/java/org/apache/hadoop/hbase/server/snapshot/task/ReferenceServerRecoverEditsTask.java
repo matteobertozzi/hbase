@@ -27,8 +27,10 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.server.snapshot.error.SnapshotErrorListener;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
@@ -36,18 +38,17 @@ import org.apache.hadoop.hbase.snapshot.exception.HBaseSnapshotException;
 import org.apache.hadoop.hbase.util.FSUtils;
 
 /**
- * Reference all the WAL files under a server's WAL directory
+ * Reference all recover.edits for the region
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class ReferenceServerWALsTask extends SnapshotTask {
-  private static final Log LOG = LogFactory.getLog(ReferenceServerWALsTask.class);
-  // XXX does this need to be HasThread?
+public class ReferenceServerRecoverEditsTask extends SnapshotTask {
+  private static final Log LOG = LogFactory.getLog(ReferenceServerRecoverEditsTask.class);
+
   private final FileSystem fs;
   private final Configuration conf;
-  private final String serverName;
-  private boolean done;
-  private Path logDir;
+  private final String regionName;
+  private Path editsDir;
 
   /**
    * @param snapshot snapshot being run
@@ -59,61 +60,34 @@ public class ReferenceServerWALsTask extends SnapshotTask {
    * @param fs filesystem where the log files are stored and should be referenced
    * @throws IOException
    */
-  public ReferenceServerWALsTask(SnapshotDescription snapshot,
-      SnapshotErrorListener failureListener, final Path logDir, final Configuration conf,
-      final FileSystem fs) throws IOException {
+  public ReferenceServerRecoverEditsTask(SnapshotDescription snapshot,
+      SnapshotErrorListener failureListener, final Path regionDir,
+      final Configuration conf, final FileSystem fs) throws IOException {
     super(snapshot, failureListener);
     this.fs = fs;
     this.conf = conf;
-    this.serverName = logDir.getName();
-    this.logDir = logDir;
+    this.regionName = regionDir.getName();
+    this.editsDir = new Path(regionDir, HLog.RECOVERED_EDITS_DIR);
   }
 
   @Override
   public void run() {
-    // TODO switch to using a single file to reference all required WAL files
-    if (done) {
-      LOG.debug("No HLogs to add to snapshot, done!");
-      return;
-    }
     try {
-      // Iterate through each of the log files and add a reference to it.
-      // assumes that all the files under the server's logs directory is a log
-      FileStatus[] serverLogs = FSUtils.listStatus(fs, logDir, null);
-      if (serverLogs == null) LOG.info("No logs for server directory:" + logDir
-          + ", done referencing files.");
+      if (!fs.exists(editsDir)) return;
 
-      if (LOG.isDebugEnabled()) LOG.debug("Adding references for WAL files:"
-          + Arrays.toString(serverLogs));
+      this.failOnError();
 
-      for (FileStatus file : serverLogs) {
-        this.failOnError();
+      Path rootDir = FSUtils.getRootDir(conf);
+      Path snapshotDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(this.snapshot, rootDir);
+      Path snapshotLogDir = SnapshotReferenceUtil.getRecoveredEditsDir(snapshotDir, regionName);
 
-        // TODO - switch to using MonitoredTask
-        // add the reference to the file
-        // 0. Build a reference path based on the file name
-        // get the current snapshot directory
-        Path rootDir = FSUtils.getRootDir(conf);
-        Path snapshotDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(this.snapshot, rootDir);
-        Path snapshotLogDir = SnapshotReferenceUtil.getLogsDir(snapshotDir, serverName);
-        // actually store the reference on disk (small file)
-        Path ref = new Path(snapshotLogDir, file.getPath().getName());
-        if (!FSUtils.touch(fs, ref)) {
-          if (!fs.exists(ref)) {
-            throw new IOException("Couldn't create reference for:"
-              + file.getPath());
-          }
-        }
-        LOG.debug("Completed WAL referencing for: " + file.getPath() + " to " + ref);
-      }
+      FileUtil.copy(fs, editsDir, fs, snapshotLogDir, false, false, conf);
+      LOG.debug("Successfully completed recovered.edits referencing");
     } catch (HBaseSnapshotException e) {
-      LOG.error("Could not complete adding WAL files to snapshot "
+      LOG.error("Could not complete adding recovered.edits files to snapshot "
           + "because received nofification that snapshot failed.");
-      return;
     } catch (IOException e) {
-      this.snapshotFailure("Error referencing WAL files", e);
-      return;
+      this.snapshotFailure("Error referencing recovered.edits files", e);
     }
-    LOG.debug("Successfully completed WAL referencing for ALL files");
   }
 }

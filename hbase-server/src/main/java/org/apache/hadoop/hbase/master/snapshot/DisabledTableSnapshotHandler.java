@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.server.errorhandling.OperationAttemptTimer;
 import org.apache.hadoop.hbase.server.snapshot.TakeSnapshotUtils;
 import org.apache.hadoop.hbase.server.snapshot.error.SnapshotErrorListener;
-import org.apache.hadoop.hbase.server.snapshot.task.ReferenceServerWALsTask;
+import org.apache.hadoop.hbase.server.snapshot.task.ReferenceServerRecoverEditsTask;
 import org.apache.hadoop.hbase.server.snapshot.task.TableInfoCopyTask;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.zookeeper.KeeperException;
@@ -86,20 +86,7 @@ public class DisabledTableSnapshotHandler extends TableSnapshotHandler {
     // 0. start the timer for taking the snapshot
     timer.start();
 
-    // 1. create references for each of the WAL files for the region
-    Path logdir = new Path(FSUtils.getRootDir(conf), HConstants.HREGION_LOGDIR_NAME);
-    FileStatus[] serverLogDirs = FSUtils.listStatus(fs, logdir, visibleDirFilter);
-    // if we have logs directories, then reference all the logs in each server directory
-    if (serverLogDirs != null) {
-      for (FileStatus serverDir : serverLogDirs) {
-        ReferenceServerWALsTask op = new ReferenceServerWALsTask(snapshot, this.monitor,
-            serverDir.getPath(), conf, fs);
-        op.run();
-        monitor.failOnError();
-      }
-    }
-
-    // 2. write the table info to disk
+    // 1. write the table info to disk
     LOG.info("Starting to copy tableinfo for offline snapshot:\n" + snapshot);
     TableInfoCopyTask tableInfo = new TableInfoCopyTask(this.monitor, snapshot, fs,
         FSUtils.getRootDir(conf));
@@ -107,10 +94,17 @@ public class DisabledTableSnapshotHandler extends TableSnapshotHandler {
     monitor.failOnError();
 
 
-    // 3. for each region, write all the info to disk
+    // 2. for each region, write all the info to disk
     LOG.info("Starting to write region info and WALs for regions for offline snapshot:" + snapshot);
     for (HRegionInfo regionInfo : regions) {
-      // 1.1 copy the regionInfo files to the snapshot
+      // 2.1. create references for each of the WAL files for the region
+      Path regionDir = new Path(tdir, regionInfo.getEncodedName());
+      ReferenceServerRecoverEditsTask op = new ReferenceServerRecoverEditsTask(snapshot,
+          this.monitor, regionDir, conf, fs);
+      op.run();
+      monitor.failOnError();
+
+      // 2.2 copy the regionInfo files to the snapshot
       Path snapshotRegionDir = TakeSnapshotUtils.getRegionSnaphshotDirectory(snapshot, rootDir,
         regionInfo.getEncodedName());
       HRegion.writeRegioninfoOnFilesystem(regionInfo, snapshotRegionDir, fs, conf);

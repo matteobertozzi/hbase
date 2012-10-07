@@ -139,8 +139,8 @@ public abstract class TableSnapshotHandler extends TableEventHandler implements 
     verifyRegionsInfo(snapshotDir);
 
     // check that the hlogs, if they exist, are valid
-    if (shouldCheckLogs(snapshot.getType()))
-    verifyLogs(snapshotDir);
+    //if (shouldCheckLogs(snapshot.getType()))
+    //  verifyLogs(snapshotDir);
   }
 
   /**
