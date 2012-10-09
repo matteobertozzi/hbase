@@ -2402,6 +2402,7 @@ Server {
       // if the table is online, then have the RS handle the snapshots
       if (this.assignmentManager.getZKTable().isEnabledTable(snapshot.getTable())) {
         LOG.debug("Table enabled, starting distributed snapshot.");
+        this.getMasterFileSystem().getFileSystem().delete(workingDir, true);
         throw new ServiceException(new UnsupportedOperationException(
             "Online table snapshots are not yet supported"));
       }
@@ -2413,6 +2414,11 @@ Server {
         throw new TablePartiallyOpenException(snapshot.getTable() + " isn't fully open.");
       }
     } catch (IOException e) {
+      try {
+        this.getMasterFileSystem().getFileSystem().delete(workingDir, true);
+      } catch (IOException de) {
+        LOG.error("Unabled to remove the snapshot workingDir=" + workingDir, de);
+      }
       LOG.error("Couldn't create snapshot handler for snapshot:" + snapshot, e);
       throw new ServiceException(e);
     }
