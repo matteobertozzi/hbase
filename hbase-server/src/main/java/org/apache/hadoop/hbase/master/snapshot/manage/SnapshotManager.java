@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.master.snapshot.DisabledTableSnapshotHandler;
 import org.apache.hadoop.hbase.master.snapshot.TableSnapshotHandler;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription.Type;
-import org.apache.hadoop.hbase.server.Aborting;
 import org.apache.hadoop.hbase.server.errorhandling.impl.ExceptionOrchestrator;
 import org.apache.hadoop.hbase.server.snapshot.error.SnapshotErrorListener;
 import org.apache.hadoop.hbase.server.snapshot.error.SnapshotErrorMonitorFactory;
@@ -52,7 +51,7 @@ import org.apache.zookeeper.KeeperException;
  * Start monitoring a snapshot only when the previous one reaches an end status.
  */
 @InterfaceAudience.Private
-public class SnapshotManager extends Aborting {
+public class SnapshotManager {
   private static final Log LOG = LogFactory.getLog(SnapshotManager.class);
 
   // TODO - enable having multiple snapshots with multiple monitors
@@ -60,7 +59,8 @@ public class SnapshotManager extends Aborting {
   private final MasterServices master;
   private SnapshotErrorMonitorFactory errorFactory;
   private final ExceptionOrchestrator<HBaseSnapshotException> dispatcher;
-  private TableSnapshotHandler handler;
+  private TableSnapshotHandler snapshotHandler;
+  private volatile boolean snapshotAborted;
 
   public SnapshotManager(final MasterServices master, final ZooKeeperWatcher watcher)
       throws KeeperException {
@@ -73,8 +73,23 @@ public class SnapshotManager extends Aborting {
    * @return <tt>true</tt> if there is a snapshot in process, <tt>false</tt> otherwise
    * @throws SnapshotCreationException if the snapshot failed
    */
-  public boolean isInProcess() throws SnapshotCreationException {
-    return handler != null && !handler.getFinished();
+  public boolean isSnapshotInProcess() throws SnapshotCreationException {
+    return snapshotHandler != null && !snapshotHandler.getFinished();
+  }
+
+  public boolean isSnapshotAborted() {
+    return this.snapshotAborted;
+  }
+
+  public void abortSnapshot(String why, Throwable e) {
+    // short circuit
+    if (this.isSnapshotAborted()) return;
+
+    this.snapshotAborted = true;
+    LOG.warn("Aborting because: " + why, e);
+
+    // pass the abort onto all the listeners
+    this.dispatcher.receiveError(why, new HBaseSnapshotException(e));
   }
 
   public synchronized DisabledTableSnapshotHandler newDisabledTableSnapshotHandler(
@@ -85,7 +100,7 @@ public class SnapshotManager extends Aborting {
     SnapshotErrorListener monitor = this.errorFactory.createMonitorForSnapshot(snapshot);
     DisabledTableSnapshotHandler handler = new DisabledTableSnapshotHandler(snapshot, parent,
         this.master, monitor, this);
-    this.handler = handler;
+    this.snapshotHandler = handler;
     return handler;
   }
 
@@ -93,17 +108,7 @@ public class SnapshotManager extends Aborting {
    * @return SnapshotTracker for current snapshot
    */
   public TableSnapshotHandler getCurrentSnapshotMonitor() {
-    return this.handler;
-  }
-
-  @Override
-  public void abort(String why, Throwable e) {
-    // short circuit
-    if (this.isAborted()) return;
-    // make sure we get aborted
-    super.abort(why, e);
-    // pass the abort onto all the listeners
-    this.dispatcher.receiveError(why, new HBaseSnapshotException(e));
+    return this.snapshotHandler;
   }
 
   /**
@@ -116,9 +121,9 @@ public class SnapshotManager extends Aborting {
    */
   public void completeSnapshot(Path snapshotDir, Path workingDir, FileSystem fs)
       throws SnapshotCreationException, IOException {
-    if (this.handler == null) return;
+    if (this.snapshotHandler == null) return;
     LOG.debug("Setting handler to finsihed.");
-    this.handler.finish();
+    this.snapshotHandler.finish();
     LOG.debug("Sentinel is done, just moving the snapshot from " + workingDir + " to "
         + snapshotDir);
     if (!fs.rename(workingDir, snapshotDir)) {
@@ -132,7 +137,7 @@ public class SnapshotManager extends Aborting {
    * <p>
    * Exposed for TESTING.
    */
-  public void reset() {
+  public void resetSnaphot() {
     setSnapshotHandler(null);
   }
 
@@ -143,7 +148,7 @@ public class SnapshotManager extends Aborting {
    * @param handler handler the master should use
    */
   public void setSnapshotHandler(TableSnapshotHandler handler) {
-    this.handler = handler;
+    this.snapshotHandler = handler;
   }
 
   /**

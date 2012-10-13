@@ -159,7 +159,7 @@ public class TestSnapshotFromClient {
     FSUtils.logFileSystemState(UTIL.getTestFileSystem(),
       FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
     SnapshotTestingUtils.confirmSnapshotValid(snapshots.get(0), TABLE_NAME, TEST_FAM, rootDir,
-      admin, fs, true, new Path(rootDir, HConstants.HREGION_LOGDIR_NAME));
+      admin, fs, false, new Path(rootDir, HConstants.HREGION_LOGDIR_NAME));
 
     admin.deleteSnapshot(snapshot);
     snapshots = admin.listSnapshots();
