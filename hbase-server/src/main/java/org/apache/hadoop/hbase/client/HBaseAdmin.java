@@ -2421,8 +2421,8 @@ public class HBaseAdmin implements Abortable, Closeable {
     // actually restore the snapshot
     RestoreSnapshotResponse response = restoreSnapshotAsync(snapshot);
 
-    final IsRestoreSnapshotDoneRequest request = IsRestoreSnapshotDoneRequest.newBuilder().setSnapshot(snapshot)
-        .build();
+    final IsRestoreSnapshotDoneRequest request = IsRestoreSnapshotDoneRequest.newBuilder()
+        .setSnapshot(snapshot).build();
     IsRestoreSnapshotDoneResponse done = IsRestoreSnapshotDoneResponse.newBuilder().buildPartial();
     long max = response.getExpectedTime();
     long maxPauseTime = max / this.numRetries;
@@ -2481,37 +2481,6 @@ public class HBaseAdmin implements Abortable, Closeable {
         return masterAdmin.restoreSnapshot(null, request);
       }
     });
-  }
-
-  /**
-   * Check the current restore state of the passed snapshot.
-   * <p>
-   * There are three possible states:
-   * <ol>
-   * <li>running - returns <tt>false</tt></li>
-   * <li>finished - returns <tt>true</tt></li>
-   * <li>finished with error - throws the exception that caused the restore to fail</li>
-   * </ol>
-   * <p>
-   * The cluster only knows about the most recent snapshot. Therefore, if another snapshot has been
-   * run/started since the snapshot your are checking, you will recieve an
-   * {@link UnknownSnapshotException}.
-   * @param snapshot description of the snapshot to check
-   * @return <tt>true</tt> if the snapshot is restored, <tt>false</tt> if the restore is still
-   *         running
-   * @throws IOException if we have a network issue
-   * @throws HBaseSnapshotException if the restore failed
-   * @throws UnknownSnapshotException if the requested snapshot is unknown
-   */
-  public boolean isRestoreSnapshotFinshed(final SnapshotDescription snapshot)
-      throws IOException, HBaseSnapshotException, UnknownSnapshotException {
-    return execute(new MasterAdminCallable<IsRestoreSnapshotDoneResponse>() {
-      @Override
-      public IsRestoreSnapshotDoneResponse call() throws ServiceException {
-        return masterAdmin.isRestoreSnapshotDone(null,
-          IsRestoreSnapshotDoneRequest.newBuilder().setSnapshot(snapshot).build());
-      }
-    }).getDone();
   }
 
   /**

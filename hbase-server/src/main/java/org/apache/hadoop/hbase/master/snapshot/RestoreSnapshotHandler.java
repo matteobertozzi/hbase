@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.master.handler;
+package org.apache.hadoop.hbase.master.snapshot;
 
 import java.io.IOException;
 import java.util.List;
@@ -38,6 +38,8 @@ import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
+import org.apache.hadoop.hbase.master.handler.ModifyTableEventHandler;
+import org.apache.hadoop.hbase.master.snapshot.manage.SnapshotManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.restore.RestoreSnapshotHelper;
@@ -52,16 +54,24 @@ public class RestoreSnapshotHandler extends ModifyTableEventHandler {
   private static final Log LOG = LogFactory.getLog(RestoreSnapshotHandler.class);
 
   private final HTableDescriptor hTableDescriptor;
+  private final SnapshotManager snapshotManager;
   private final SnapshotDescription snapshot;
+  private final long waitTime;
 
-  public RestoreSnapshotHandler(final Server server, final SnapshotDescription snapshot,
-      final HTableDescriptor htd, final MasterServices masterServices) throws IOException {
-    super(EventType.C_M_RESTORE_SNAPSHOT, htd.getName(), server, masterServices);
+  public RestoreSnapshotHandler(final MasterServices masterServices,
+      final SnapshotManager snapshotManager,
+      final SnapshotDescription snapshot, final HTableDescriptor htd, long waitTime)
+      throws IOException {
+    super(EventType.C_M_RESTORE_SNAPSHOT, htd.getName(), masterServices, masterServices);
 
-    // Snapshot description
+    // Snapshot information
+    this.snapshotManager = snapshotManager;
     this.snapshot = snapshot;
+    this.waitTime = waitTime;
+
     // Check table exists.
     getTableDescriptor();
+
     // This is the new schema we are going to write out as this modification.
     this.hTableDescriptor = htd;
   }
@@ -82,12 +92,16 @@ public class RestoreSnapshotHandler extends ModifyTableEventHandler {
 
       byte[] tableName = hTableDescriptor.getName();
       RestoreSnapshotHelper restoreHelper = new RestoreSnapshotHelper(conf, fs,
-                        catalogTracker, snapshot, snapshotDir, hTableDescriptor, tableDir);
+          catalogTracker, snapshot, snapshotDir, hTableDescriptor, tableDir, waitTime);
       restoreHelper.restore();
+
+      // At this point the restore is complete. Next step is enabling the table.
+      snapshotManager.restoreCompleted(snapshot);
 
       hris.clear();
       hris.addAll(MetaReader.getTableRegions(catalogTracker, tableName));
     } catch (IOException e) {
+      snapshotManager.restoreFailed(snapshot, e);
       throw new RestoreSnapshotException(e);
     }
 

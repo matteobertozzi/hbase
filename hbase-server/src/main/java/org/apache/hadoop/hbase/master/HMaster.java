@@ -79,6 +79,7 @@ import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
@@ -90,13 +91,11 @@ import org.apache.hadoop.hbase.master.balancer.ClusterStatusChore;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
-import org.apache.hadoop.hbase.master.handler.CloneSnapshotHandler;
 import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
 import org.apache.hadoop.hbase.master.handler.DeleteTableHandler;
 import org.apache.hadoop.hbase.master.handler.DisableTableHandler;
 import org.apache.hadoop.hbase.master.handler.EnableTableHandler;
 import org.apache.hadoop.hbase.master.handler.ModifyTableHandler;
-import org.apache.hadoop.hbase.master.handler.RestoreSnapshotHandler;
 import org.apache.hadoop.hbase.master.handler.ServerShutdownHandler;
 import org.apache.hadoop.hbase.master.handler.TableAddFamilyHandler;
 import org.apache.hadoop.hbase.master.handler.TableDeleteFamilyHandler;
@@ -192,6 +191,7 @@ import org.apache.hadoop.hbase.snapshot.exception.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.exception.SnapshotDoesNotExistsException;
 import org.apache.hadoop.hbase.snapshot.exception.SnapshotExistsException;
 import org.apache.hadoop.hbase.snapshot.exception.RenameSnapshotException;
+import org.apache.hadoop.hbase.snapshot.exception.RestoreSnapshotException;
 import org.apache.hadoop.hbase.snapshot.exception.TablePartiallyOpenException;
 import org.apache.hadoop.hbase.snapshot.exception.UnknownSnapshotException;
 import org.apache.hadoop.hbase.snapshot.restore.RestoreSnapshotHelper;
@@ -2614,25 +2614,37 @@ Server {
       SnapshotDescription snapshot = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
       HTableDescriptor snapshotTableDesc = FSTableDescriptors.getTableDescriptor(fs, snapshotDir);
       String tableName = reqSnapshot.hasTable() ? reqSnapshot.getTable() : snapshot.getTable();
-      LOG.info("Restore snapshot=" + snapshot.getName() + " as table=" + tableName);
 
+      // Check if the same restore is already running
+      if (snapshotManager.isRestoreInProcess(reqSnapshot)) {
+        String msg = "Restore snapshot=" + snapshot.getName() +
+          " as table=" + tableName + " already in progress";
+        LOG.error(msg);
+        throw new RestoreSnapshotException(msg);
+      }
+
+      long waitTime = RestoreSnapshotHelper.getMaxMasterTimeout(conf,
+        RestoreSnapshotHelper.DEFAULT_MAX_WAIT_TIME);
+
+      // Prepare the restore/clone operation
+      EventHandler handler;
       if (MetaReader.tableExists(catalogTracker, tableName)) {
         if (this.assignmentManager.getZKTable().isEnabledTable(snapshot.getTable())) {
           throw new ServiceException(new UnsupportedOperationException(
             "Table must be disabled to do the restore"));
         }
 
-        this.executorService.submit(new RestoreSnapshotHandler(this, snapshot,
-          snapshotTableDesc, this));
+        handler = snapshotManager.newRestoreSnapshotHandler(snapshot, snapshotTableDesc, waitTime);
       } else {
         HTableDescriptor htd = RestoreSnapshotHelper.cloneTableSchema(snapshotTableDesc,
                                                            Bytes.toBytes(tableName));
-        this.executorService.submit(new CloneSnapshotHandler(this, this.fileSystemManager,
-          snapshot, htd, conf, catalogTracker, assignmentManager));
+        handler = snapshotManager.newCloneSnapshotHandler(snapshot, htd, waitTime);
       }
 
-      long waitTime = RestoreSnapshotHelper.getMaxMasterTimeout(conf,
-        RestoreSnapshotHelper.DEFAULT_MAX_WAIT_TIME);
+      // Submit the restore/clone operation!
+      LOG.info("Restore snapshot=" + snapshot.getName() + " as table=" + tableName);
+      this.executorService.submit(handler);
+
       return RestoreSnapshotResponse.newBuilder().setExpectedTime(waitTime).build();
     } catch (HBaseSnapshotException e) {
       throw new ServiceException(e);
@@ -2644,17 +2656,12 @@ Server {
   @Override
   public IsRestoreSnapshotDoneResponse isRestoreSnapshotDone(RpcController controller,
       IsRestoreSnapshotDoneRequest request) throws ServiceException {
-    try {
-      SnapshotDescription reqSnapshot = request.getSnapshot();
-      Path rootDir = this.getMasterFileSystem().getRootDir();
-      Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(reqSnapshot, rootDir);
-      FileSystem fs = this.getMasterFileSystem().getFileSystem();
-      SnapshotDescription snapshot = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
-      String tableName = reqSnapshot.hasTable() ? reqSnapshot.getTable() : snapshot.getTable();
-      boolean done = this.assignmentManager.getZKTable().isEnabledTable(tableName);
-      return IsRestoreSnapshotDoneResponse.newBuilder().setDone(done).build();
-    } catch (IOException e) {
-      throw new ServiceException(e);
+    SnapshotDescription snapshot = request.getSnapshot();
+    boolean done = !this.snapshotManager.isRestoreInProcess(snapshot);
+    if (done) {
+      SnapshotManager.OperationStatus status = this.snapshotManager.restoreRemove(snapshot);
+      if (status != null && status.isFailed()) throw new ServiceException(status.getError());
     }
+    return IsRestoreSnapshotDoneResponse.newBuilder().setDone(done).build();
   }
 }

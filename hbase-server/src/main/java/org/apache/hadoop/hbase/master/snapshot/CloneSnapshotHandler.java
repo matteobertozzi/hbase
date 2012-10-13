@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.master.handler;
+package org.apache.hadoop.hbase.master.snapshot;
 
 import java.io.IOException;
 import java.util.List;
@@ -37,7 +37,10 @@ import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaReader;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
+import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
+import org.apache.hadoop.hbase.master.snapshot.manage.SnapshotManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.restore.RestoreSnapshotHelper;
@@ -49,16 +52,22 @@ import org.apache.zookeeper.KeeperException;
  */
 @InterfaceAudience.Private
 public class CloneSnapshotHandler extends CreateTableHandler {
+  private final SnapshotManager snapshotManager;
   private final SnapshotDescription snapshot;
+  private final long waitTime;
 
-  public CloneSnapshotHandler(final Server server, final MasterFileSystem fileSystemManager,
-      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor,
-      final Configuration conf, final CatalogTracker catalogTracker,
-      final AssignmentManager assignmentManager)
+  public CloneSnapshotHandler(final MasterServices masterServices,
+      final SnapshotManager snapshotManager,
+      final SnapshotDescription snapshot, final HTableDescriptor hTableDescriptor, long waitTime)
       throws NotAllMetaRegionsOnlineException, TableExistsException, IOException {
-    super(server, fileSystemManager, hTableDescriptor, conf, null,
-      catalogTracker, assignmentManager);
+    super(masterServices, masterServices.getMasterFileSystem(), hTableDescriptor,
+      masterServices.getConfiguration(), null, masterServices.getCatalogTracker(),
+      masterServices.getAssignmentManager());
+
+    // Snapshot information
+    this.snapshotManager = snapshotManager;
     this.snapshot = snapshot;
+    this.waitTime = waitTime;
   }
 
   @Override
@@ -72,11 +81,15 @@ public class CloneSnapshotHandler extends CreateTableHandler {
       Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, rootDir);
 
       RestoreSnapshotHelper restoreHelper = new RestoreSnapshotHelper(conf, fs,
-                        catalogTracker, snapshot, snapshotDir, hTableDescriptor, tableDir);
+          catalogTracker, snapshot, snapshotDir, hTableDescriptor, tableDir, waitTime);
       restoreHelper.restore();
+
+      // At this point the restore is complete. Next step is enabling the table.
+      snapshotManager.restoreCompleted(snapshot);
 
       return MetaReader.getTableRegions(catalogTracker, tableName);
     } catch (IOException e) {
+      snapshotManager.restoreFailed(snapshot, e);
       throw new RestoreSnapshotException(e);
     }
   }
