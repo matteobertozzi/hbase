@@ -34,6 +34,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.io.Reference;
+import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -88,13 +89,18 @@ public class TakeSnapshotUtils {
 
   private static Path createReferenceFile(final FileSystem fs, final Path srcFile, Path dstDir)
       throws IOException {
+    String fileName = srcFile.getName();
+    if (HFileLink.isHFileLink(fileName)) {
+      fileName = HFileLink.getReferencedHFileName(fileName);
+    }
+
     // A reference to the entire store file.
     Reference r = Reference.createWholeFileReference();
     LOG.debug("Created reference object.");
     String parentTableName = srcFile.getParent().getParent().getParent().getName();
     // Write reference with same file id only with the other table name+ // as
     // suffix.
-    Path p = new Path(dstDir, srcFile.getName() + "." + parentTableName);
+    Path p = new Path(dstDir, fileName + "." + parentTableName);
     LOG.debug("Got final name:" + p);
     return r.write(fs, p);
   }
