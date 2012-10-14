@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
+import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 
 /**
  * Implementation of a log cleaner that checks if a hfile is still used by snapshots of HBase
@@ -56,24 +57,16 @@ public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate implements
   }
 
   @Override
-  public void loadFiles(FileSystem fs, FileStatus snapshot, final Set<String> cache)
+  public void loadFiles(final FileSystem fs, final FileStatus snapshot, final Set<String> cache)
       throws IOException {
-    FileStatus[] hfiles = SnapshotCleanerChoreUtil.listHFiles(fs, snapshot.getPath());
-    if (hfiles == null || hfiles.length == 0) {
-      LOG.debug("No hfiles found in snapshot:" + snapshot.getPath());
-      return;
-    }
-    // add all the hfiles for the snapshot
-    for (FileStatus file : hfiles) {
-      try {
-        String referenceName = file.getPath().getName();
-        String hfileName = Reference.getDeferencedHFileName(referenceName);
-        LOG.debug("Adding hfile:" + hfileName + " to cleaner cache.");
-        cache.add(hfileName);
-      } catch (IllegalArgumentException e) {
-        LOG.error(file.getPath() + " is not a valid hfile or reference file. Ignoring!");
+    SnapshotReferenceUtil.listStoreFiles(fs, snapshot.getPath(),
+        new SnapshotReferenceUtil.StoreFilesFilter() {
+      public void storeFile (final String region, final String family, final String hfile)
+          throws IOException {
+        LOG.debug("Adding hfile:" + hfile + " to cleaner cache.");
+        cache.add(hfile);
       }
-    }
+    });
   }
 
   @Override
