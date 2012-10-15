@@ -23,7 +23,7 @@ module Shell
         return <<-EOF
 Delete a specified snapshot. Examples:
 
-  hbase> delete_snapshot 'name',
+  hbase> delete_snapshot 'snapshotName',
 EOF
       end
 

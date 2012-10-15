@@ -21,9 +21,10 @@ module Shell
     class ListSnapshots < Command
       def help
         return <<-EOF
-List all snapshots taken. Optional regular expression parameter could
-be used to filter the output. Examples:
+List all snapshots taken (by printing the names).
+Optional regular expression parameter could be used to filter the output.
 
+Examples:
   hbase> list_snapshots
   hbase> list_snapshots 'abc.*'
 EOF

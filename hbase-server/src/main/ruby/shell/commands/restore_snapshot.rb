@@ -21,9 +21,13 @@ module Shell
     class RestoreSnapshot < Command
       def help
         return <<-EOF
-Restore a specified snapshot. Examples:
+Restore a specified snapshot.
+The restore will replace the content of the original table,
+bringing back the content to the snapshot state.
+The table must be disabled.
 
-  hbase> restore_snapshot 'name'
+Examples:
+  hbase> restore_snapshot 'snapshotName'
 EOF
       end
 

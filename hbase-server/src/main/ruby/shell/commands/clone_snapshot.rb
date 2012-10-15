@@ -22,8 +22,10 @@ module Shell
       def help
         return <<-EOF
 Create a new table by cloning the snapshot content. Examples:
+There're no copies of data involved.
+And writing on the newly created table will not influence the snapshot data.
 
-  hbase> clone_snapshot 'name', 'tableName'
+  hbase> clone_snapshot 'snapshotName', 'tableName'
 EOF
       end
 

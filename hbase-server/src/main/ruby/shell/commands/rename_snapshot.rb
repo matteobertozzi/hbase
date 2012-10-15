@@ -23,7 +23,7 @@ module Shell
         return <<-EOF
 Rename a specified snapshot. Examples:
 
-  hbase> rename_snapshot 'old_snapshot_name' 'new_snapshot_name'
+  hbase> rename_snapshot 'oldSnapshotName' 'newSnapshotName'
 EOF
       end
 

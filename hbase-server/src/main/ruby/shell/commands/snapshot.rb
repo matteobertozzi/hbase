@@ -23,7 +23,7 @@ module Shell
         return <<-EOF
 Take a snapshot of specified table. Examples:
 
-  hbase> snapshot 't1', 'my-snapshot'
+  hbase> snapshot 'sourceTable', 'snapshotName'
 EOF
       end
 
