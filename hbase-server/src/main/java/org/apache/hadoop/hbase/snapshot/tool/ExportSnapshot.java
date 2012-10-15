@@ -88,6 +88,7 @@ public final class ExportSnapshot extends Configured implements Tool {
 
   private final String INPUT_FOLDER_PREFIX = "export-files.";
 
+  // Export Map-Reduce Counters, to keep track of the progress
   public enum Counter { MISSING_FILES, COPY_FAILED, BYTES_EXPECTED, BYTES_COPIED };
 
   private static class ExportMapper extends Mapper<Text, NullWritable, NullWritable, NullWritable> {
@@ -111,15 +112,11 @@ public final class ExportSnapshot extends Configured implements Tool {
       outputRoot = new Path(conf.get(CONF_OUTPUT_ROOT));
       inputRoot = new Path(conf.get(CONF_INPUT_ROOT));
 
-      inputArchive = new Path(conf.get(CONF_INPUT_ARCHIVE));
-      if (inputArchive == null) {
-        inputArchive = new Path(inputRoot, HConstants.HFILE_ARCHIVE_DIRECTORY);
-      }
+      inputArchive = new Path(inputRoot, conf.get(CONF_INPUT_ARCHIVE,
+        HConstants.HFILE_ARCHIVE_DIRECTORY));
 
-      outputArchive = new Path(conf.get(CONF_OUTPUT_ARCHIVE));
-      if (outputArchive == null) {
-        outputArchive = new Path(outputRoot, HConstants.HFILE_ARCHIVE_DIRECTORY);
-      }
+      outputArchive = new Path(outputRoot, conf.get(CONF_OUTPUT_ARCHIVE,
+        HConstants.HFILE_ARCHIVE_DIRECTORY));
 
       try {
         inputFs = FileSystem.get(inputRoot.toUri(), conf);
@@ -178,7 +175,7 @@ public final class ExportSnapshot extends Configured implements Tool {
         String region = HFileLink.getReferencedRegionName(inputPath.getName());
         String hfile = HFileLink.getReferencedHFileName(inputPath.getName());
         path = new Path(table, new Path(region, new Path(family, hfile)));
-      } else if (inputPath.depth() == 2) {
+      } else if (isHLogLinkPath(inputPath)) {
         String logName = inputPath.getName();
         path = new Path(new Path(outputRoot, HConstants.HREGION_LOGDIR_NAME), logName);
       } else {
@@ -212,10 +209,11 @@ public final class ExportSnapshot extends Configured implements Tool {
         // Ensure that the output folder is there and copy the file
         outputFs.mkdirs(outputPath.getParent());
         FSDataOutputStream out = outputFs.create(outputPath, true);
-        boolean success = copyData(context, inputPath, in, outputPath, out, inputStat.getLen());
-        out.close();
-
-        return success;
+        try {
+          return copyData(context, inputPath, in, outputPath, out, inputStat.getLen());
+        } finally {
+          out.close();
+        }
       } finally {
         in.close();
       }
@@ -273,7 +271,7 @@ public final class ExportSnapshot extends Configured implements Tool {
       try {
         if (HFileLink.isHFileLink(path)) {
           return new HFileLink(inputRoot, inputArchive, path).open(inputFs);
-        } else if (path.depth() == 2) {
+        } else if (isHLogLinkPath(path)) {
           String serverName = path.getParent().getName();
           String logName = path.getName();
           return new HLogLink(inputRoot, serverName, logName).open(inputFs);
@@ -290,7 +288,7 @@ public final class ExportSnapshot extends Configured implements Tool {
         if (HFileLink.isHFileLink(path)) {
           Path refPath = HFileLink.getReferencedPath(fs, inputRoot, inputArchive, path);
           return fs.getFileStatus(refPath);
-        } else if (path.depth() == 2) {
+        } else if (isHLogLinkPath(path)) {
           String serverName = path.getParent().getName();
           String logName = path.getName();
           return new HLogLink(inputRoot, serverName, logName).getFileStatus(fs);
@@ -326,6 +324,15 @@ public final class ExportSnapshot extends Configured implements Tool {
       if (outChecksum == null) return false;
 
       return inChecksum.equals(outChecksum);
+    }
+
+    /**
+     * HLog files are encoded as serverName/logName
+     * and since all the other files should be in /hbase/table/..path..
+     * we can rely on the depth, for now.
+     */
+    private boolean isHLogLinkPath(final Path path) {
+      return path.depth() == 2;
     }
   }
 
@@ -377,7 +384,7 @@ public final class ExportSnapshot extends Configured implements Tool {
     Collections.sort(files, new Comparator<Pair<Path, Long>>() {
       public int compare(Pair<Path, Long> a, Pair<Path, Long> b) {
         long r = a.getSecond() - b.getSecond();
-        return (r < 0) ? -1 : (r > 0) ? 1 : 0;
+        return (r < 0) ? -1 : ((r > 0) ? 1 : 0);
       }
     });
 
@@ -455,29 +462,31 @@ public final class ExportSnapshot extends Configured implements Tool {
 
     List<List<Path>> splits = getBalancedSplits(snapshotFiles, mappers);
     Path[] inputFiles = new Path[splits.size()];
-    SequenceFile.Writer writer = null;
-    try {
-      Text key = new Text();
-      int i = 0;
-      for (List<Path> files: splits) {
-        if (writer != null) writer.close();
 
-        inputFiles[i] = new Path(inputFolderPath, String.format("export-%d.seq", i));
-        writer = SequenceFile.createWriter(fs, conf, inputFiles[i], Text.class, NullWritable.class);
-
+    int i = 0;
+    Text key = new Text();
+    for (List<Path> files: splits) {
+      inputFiles[i] = new Path(inputFolderPath, String.format("export-%d.seq", i));
+      SequenceFile.Writer writer = SequenceFile.createWriter(fs, conf, inputFiles[i],
+        Text.class, NullWritable.class);
+      try {
         for (Path file: files) {
           key.set(file.toString());
           writer.append(key, NullWritable.get());
         }
+      } finally {
+        writer.close();
         i++;
       }
-    } finally {
-      if (writer != null) writer.close();
     }
 
     return inputFiles;
   }
 
+  /**
+   * Execute the export snapshot by copying the snapshot metadata, hfiles and hlogs.
+   * @return 0 on success, and != 0 upon failure.
+   */
   @Override
   public int run(String[] args) throws Exception {
     boolean verifyChecksum = true;
@@ -536,8 +545,17 @@ public final class ExportSnapshot extends Configured implements Tool {
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, inputRoot);
     Path snapshotTmpDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshotName, outputRoot);
     Path outputSnapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, outputRoot);
+
+    // Check if the snapshot already exists
     if (outputFs.exists(outputSnapshotDir)) {
-      System.err.println("The snapshot already exists in the destination.");
+      System.err.println("The snapshot '" + snapshotName +
+        "' already exists in the destination: " + outputSnapshotDir);
+      return 1;
+    }
+
+    // Check if the snapshot already in-progress
+    if (outputFs.exists(snapshotTmpDir)) {
+      System.err.println("A snapshot with the same name '" + snapshotName + "' is in-progress");
       return 1;
     }
 
@@ -550,7 +568,8 @@ public final class ExportSnapshot extends Configured implements Tool {
     try {
       FileUtil.copy(inputFs, snapshotDir, outputFs, snapshotTmpDir, false, false, getConf());
     } catch (IOException e) {
-      System.err.println("Failed to copy the snapshot directory");
+      System.err.println("Failed to copy the snapshot directory: from=" + snapshotDir +
+        " to=" + snapshotTmpDir);
       e.printStackTrace(System.err);
       return 1;
     }
@@ -609,7 +628,9 @@ public final class ExportSnapshot extends Configured implements Tool {
     System.err.println("  -snapshot NAME          Snapshot to restore.");
     System.err.println("  -copy-to NAME           Remote destination hdfs://");
     System.err.println("  -no-checksum-verify     Do not verify checksum.");
-    System.err.println("");
+    System.err.println("  -mappers                Number of mappers to use during the copy (mapreduce.job.maps).");
+    System.err.println("  -archive-dir            Path to the destination archive directory.");
+    System.err.println();
     System.err.println("Examples:");
     System.err.println("  hbase " + getClass() + " \\");
     System.err.println("    -snapshot MySnapshot -copy-to hdfs:///srv2:8082/hbase");
