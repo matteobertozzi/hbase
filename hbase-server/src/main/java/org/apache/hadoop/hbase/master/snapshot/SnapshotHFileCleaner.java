@@ -27,6 +27,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.master.cleaner.BaseHFileCleanerDelegate;
 import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
@@ -61,7 +62,7 @@ public class SnapshotHFileCleaner extends BaseHFileCleanerDelegate implements
       throws IOException {
     SnapshotReferenceUtil.listStoreFiles(fs, snapshot.getPath(),
         new SnapshotReferenceUtil.StoreFilesFilter() {
-      public void storeFile (final String region, final String family, final String hfile)
+      public void storeFile (final HRegionInfo region, final String family, final String hfile)
           throws IOException {
         LOG.debug("Adding hfile:" + hfile + " to cleaner cache.");
         cache.add(hfile);

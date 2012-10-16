@@ -206,7 +206,7 @@ public class Reference implements Writable {
     }
   }
 
-  FSProtos.Reference convert() {
+  public FSProtos.Reference convert() {
     FSProtos.Reference.Builder builder = FSProtos.Reference.newBuilder();
     // note that this means ordinal here must match the proto description
     builder.setRange(FSProtos.Reference.Range.valueOf(getFileRegion().ordinal()));
@@ -215,7 +215,7 @@ public class Reference implements Writable {
     return builder.build();
   }
 
-  static Reference convert(final FSProtos.Reference r) {
+  public static Reference convert(final FSProtos.Reference r) {
     Reference result = new Reference();
     result.splitkey = r.getSplitkey().toByteArray();
     result.region = Range.values()[r.getRange().ordinal()];

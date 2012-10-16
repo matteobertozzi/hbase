@@ -42,6 +42,10 @@ import org.apache.hadoop.hbase.server.snapshot.task.TableInfoCopyTask;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.zookeeper.KeeperException;
 
+import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotReferences;
+import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
+import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
+
 /**
  * Take a snapshot of a disabled table.
  */
@@ -93,6 +97,7 @@ public class DisabledTableSnapshotHandler extends TableSnapshotHandler {
     tableInfo.run();
     monitor.failOnError();
 
+    SnapshotReferences.Builder snapshotRefs = SnapshotReferences.newBuilder();
 
     // 2. for each region, write all the info to disk
     LOG.info("Starting to write region info and WALs for regions for offline snapshot:" + snapshot);
@@ -104,78 +109,17 @@ public class DisabledTableSnapshotHandler extends TableSnapshotHandler {
       op.run();
       monitor.failOnError();
 
-      // 2.2 copy the regionInfo files to the snapshot
-      Path snapshotRegionDir = TakeSnapshotUtils.getRegionSnaphshotDirectory(snapshot, rootDir,
-        regionInfo.getEncodedName());
-      HRegion.writeRegioninfoOnFilesystem(regionInfo, snapshotRegionDir, fs, conf);
-      // check for error for each region
+      // 2.2. reference all region, family, hfiles
+      snapshotRefs.addRegions(SnapshotReferenceUtil.createRegionReference(fs, regionDir, regionInfo));
       monitor.failOnError();
     }
 
-    // 4. reference all region directories for the table
-    LOG.info("Starting to reference hfiles for offline snapshot:" + snapshot);
-    // get the server directories
-    FileStatus[] regionDirs = FSUtils.listStatus(fs, tdir, visibleDirFilter);
-    // if no regions, then we are done
-    if (regionDirs == null) return;
-    monitor.failOnError();
-
-    // 4.1 for each region, reference the hfiles in that directory
-    if (LOG.isDebugEnabled()) {
-      // log the directories we are searching for hfiles
-      List<String> dirs = new ArrayList<String>(regionDirs.length);
-      for (FileStatus files : regionDirs) {
-        dirs.add(files.getPath().toString());
-      }
-      LOG.info("Referencing HFiles in " + dirs + " for offline snapshot:" + snapshot);
-    }
-    for (FileStatus regionDir : regionDirs) {
-      FileStatus[] fams = FSUtils.listStatus(fs, regionDir.getPath(), visibleDirFilter);
-      // if no families, then we are done again
-      if (fams == null) continue;
-      addReferencesToHFilesInRegion(regionDir.getPath(), fams);
-      monitor.failOnError();
-    }
+    Path rootDir = FSUtils.getRootDir(conf);
+    Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, rootDir);
+    SnapshotReferenceUtil.writeSnapshotReferences(fs, workingDir,
+      server.getServerName().toString(), snapshotRefs.build());
 
     // 5. mark operation as completed
     timer.complete();
-  }
-
-  /**
-   * Archive all the hfiles in the region
-   * @param regionDir full path of the directory for the region
-   * @param families status of all the families in the region
-   * @throws IOException if we cannot create a reference or read a directory (underlying fs error)
-   */
-  private void addReferencesToHFilesInRegion(Path regionDir, FileStatus[] families)
-      throws IOException {
-    if (families == null || families.length == 0) {
-      LOG.info("No families under region directory:" + regionDir
-          + ", not attempting to add references.");
-      return;
-    }
-
-    // snapshot directories to store the hfile reference
-    List<Path> snapshotFamilyDirs = TakeSnapshotUtils.getFamilySnapshotDirectories(snapshot,
-      rootDir, regionDir.getName(), families);
-
-    LOG.debug("Add hfile references to snapshot directories:" + snapshotFamilyDirs);
-    for (int i = 0; i < families.length; i++) {
-      FileStatus family = families[i];
-      Path familyDir = family.getPath();
-      // get all the hfiles in the family
-      FileStatus[] hfiles = FSUtils.listStatus(fs, familyDir, fileFilter);
-
-      // if no hfiles, then we are done with this family
-      if (hfiles == null) {
-        LOG.debug("Not hfiles found for family: " + familyDir);
-        continue;
-      }
-
-      // create a reference for each hfile
-      for (FileStatus hfile : hfiles) {
-        TakeSnapshotUtils.createReference(fs, conf, hfile.getPath(), snapshotFamilyDirs.get(i));
-      }
-    }
   }
 }

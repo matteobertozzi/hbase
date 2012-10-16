@@ -67,6 +67,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.HRegionInfo;
 
 /**
  * Export the specified snapshot to a given FileSystem.
@@ -345,9 +346,9 @@ public final class ExportSnapshot extends Configured implements Tool {
     // Get snapshot files
     SnapshotReferenceUtil.listReferencedFiles(fs, snapshotDir,
       new SnapshotReferenceUtil.FilesFilter() {
-        public void storeFile (final String region, final String family, final String hfile)
+        public void storeFile (final HRegionInfo region, final String family, final String hfile)
             throws IOException {
-          Path path = new Path(family, HFileLink.createHFileLinkName(table, region, hfile));
+          Path path = new Path(family, HFileLink.createHFileLinkName(table, region.getEncodedName(), hfile));
           long size = fs.getFileStatus(HFileLink.getReferencedPath(conf, fs, path)).getLen();
           files.add(new Pair<Path, Long>(path, size));
         }

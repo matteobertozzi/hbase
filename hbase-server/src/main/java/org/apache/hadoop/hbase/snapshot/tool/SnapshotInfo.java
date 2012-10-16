@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
+import org.apache.hadoop.hbase.HRegionInfo;
 
 @InterfaceAudience.Public
 @InterfaceStability.Evolving
@@ -139,15 +140,15 @@ public final class SnapshotInfo extends Configured implements Tool {
     final AtomicLong logSize = new AtomicLong();
     SnapshotReferenceUtil.listReferencedFiles(fs, snapshotDir,
       new SnapshotReferenceUtil.FilesFilter() {
-        public void storeFile (final String region, final String family, final String hfile)
+        public void storeFile (final HRegionInfo region, final String family, final String hfile)
             throws IOException {
-          Path path = new Path(family, HFileLink.createHFileLinkName(table, region, hfile));
+          Path path = new Path(family, HFileLink.createHFileLinkName(table, region.getEncodedName(), hfile));
           long size = fs.getFileStatus(HFileLink.getReferencedPath(conf, fs, path)).getLen();
           hfileSize.addAndGet(size);
           hfilesCount.addAndGet(1);
 
           System.out.printf("%8s %s/%s/%s/%s\n",
-            StringUtils.humanReadableInt(size), table, region, family, hfile);
+            StringUtils.humanReadableInt(size), table, region.getEncodedName(), family, hfile);
         }
 
         public void recoveredEdits (final String region, final String logfile)
