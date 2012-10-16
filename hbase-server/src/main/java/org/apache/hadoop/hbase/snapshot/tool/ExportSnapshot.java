@@ -81,9 +81,7 @@ public final class ExportSnapshot extends Configured implements Tool {
   private static final Log LOG = LogFactory.getLog(ExportSnapshot.class);
 
   private static final String CONF_CHECKSUM_VERIFY = "snapshot.export.checksum.verify";
-  private static final String CONF_OUTPUT_ARCHIVE = "snapshot.export.output.archive";
   private static final String CONF_OUTPUT_ROOT = "snapshot.export.output.root";
-  private static final String CONF_INPUT_ARCHIVE = "snapshot.export.input.archive";
   private static final String CONF_INPUT_ROOT = "snapshot.export.input.root";
 
   private final String INPUT_FOLDER_PREFIX = "export-files.";
@@ -112,11 +110,8 @@ public final class ExportSnapshot extends Configured implements Tool {
       outputRoot = new Path(conf.get(CONF_OUTPUT_ROOT));
       inputRoot = new Path(conf.get(CONF_INPUT_ROOT));
 
-      inputArchive = new Path(inputRoot, conf.get(CONF_INPUT_ARCHIVE,
-        HConstants.HFILE_ARCHIVE_DIRECTORY));
-
-      outputArchive = new Path(outputRoot, conf.get(CONF_OUTPUT_ARCHIVE,
-        HConstants.HFILE_ARCHIVE_DIRECTORY));
+      inputArchive = new Path(inputRoot, HConstants.HFILE_ARCHIVE_DIRECTORY);
+      outputArchive = new Path(outputRoot, HConstants.HFILE_ARCHIVE_DIRECTORY);
 
       try {
         inputFs = FileSystem.get(inputRoot.toUri(), conf);
@@ -331,14 +326,14 @@ public final class ExportSnapshot extends Configured implements Tool {
      * and since all the other files should be in /hbase/table/..path..
      * we can rely on the depth, for now.
      */
-    private boolean isHLogLinkPath(final Path path) {
+    private static boolean isHLogLinkPath(final Path path) {
       return path.depth() == 2;
     }
   }
 
   /**
    * Extract the list of files (HFiles/HLogs) to copy using Map-Reduce.
-   * The returned files are sorted by size.
+   * @return list of files referenced by the snapshot (pair path and size)
    */
   private List<Pair<Path, Long>> getSnapshotFiles(final FileSystem fs, final Path snapshotDir) throws IOException {
     SnapshotDescription snapshotDesc = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
@@ -373,9 +368,9 @@ public final class ExportSnapshot extends Configured implements Tool {
   }
 
   /**
-   * Given a list of file paths and sizes, create around ngroups in a balanced way as possible.
+   * Given a list of file paths and sizes, create around ngroups in as balanced a way as possible.
    * <p>
-   * The algorithm used is pretty straightforward, the file list is sorted by size.
+   * The algorithm used is pretty straightforward; the file list is sorted by size,
    * and then each group fetch the bigger file available, if a group is smaller then the
    * previous it fetches other items from the "small list".
    */
@@ -463,9 +458,9 @@ public final class ExportSnapshot extends Configured implements Tool {
     List<List<Path>> splits = getBalancedSplits(snapshotFiles, mappers);
     Path[] inputFiles = new Path[splits.size()];
 
-    int i = 0;
     Text key = new Text();
-    for (List<Path> files: splits) {
+    for (int i = 0; i < inputFiles.length; i++) {
+      List<Path> files = splits.get(i);
       inputFiles[i] = new Path(inputFolderPath, String.format("export-%d.seq", i));
       SequenceFile.Writer writer = SequenceFile.createWriter(fs, conf, inputFiles[i],
         Text.class, NullWritable.class);
@@ -476,11 +471,38 @@ public final class ExportSnapshot extends Configured implements Tool {
         }
       } finally {
         writer.close();
-        i++;
       }
     }
 
     return inputFiles;
+  }
+
+  /**
+   * Run Map-Reduce Job to perform the files copy.
+   */
+  private boolean runCopyJob(final Path inputRoot, final Path outputRoot,
+      final boolean verifyChecksum, final List<Pair<Path, Long>> snapshotFiles,
+      final int mappers) throws IOException, InterruptedException, ClassNotFoundException {
+    Configuration conf = getConf();
+    conf.setBoolean(CONF_CHECKSUM_VERIFY, verifyChecksum);
+    conf.set(CONF_OUTPUT_ROOT, outputRoot.toString());
+    conf.set(CONF_INPUT_ROOT, inputRoot.toString());
+    conf.setInt("mapreduce.job.maps", mappers);
+
+    Job job = new Job(conf);
+    job.setJobName("ExportSnapshot");
+    job.setJarByClass(ExportSnapshot.class);
+    job.setMapperClass(ExportMapper.class);
+    job.setInputFormatClass(SequenceFileInputFormat.class);
+    job.setOutputFormatClass(NullOutputFormat.class);
+    job.setMapSpeculativeExecution(false);
+    job.setNumReduceTasks(0);
+    for (Path path: createInputFiles(conf, snapshotFiles, mappers)) {
+      LOG.debug("Add Input Path=" + path);
+      SequenceFileInputFormat.addInputPath(job, path);
+    }
+
+    return job.waitForCompletion(true);
   }
 
   /**
@@ -491,7 +513,6 @@ public final class ExportSnapshot extends Configured implements Tool {
   public int run(String[] args) throws Exception {
     boolean verifyChecksum = true;
     byte[] snapshotName = null;
-    Path outputArchive = null;
     Path outputRoot = null;
     int mappers = getConf().getInt("mapreduce.job.maps", 1);
 
@@ -503,8 +524,6 @@ public final class ExportSnapshot extends Configured implements Tool {
           snapshotName = Bytes.toBytes(args[++i]);
         } else if (cmd.equals("-copy-to")) {
           outputRoot = new Path(args[++i]);
-        } else if (cmd.equals("-archive-dir")) {
-          outputArchive = new Path(args[++i]);
         } else if (cmd.equals("-no-checksum-verify")) {
           verifyChecksum = false;
         } else if (cmd.equals("-mappers")) {
@@ -531,16 +550,10 @@ public final class ExportSnapshot extends Configured implements Tool {
       printUsageAndExit();
     }
 
-    Path inputRoot = FSUtils.getRootDir(getConf());
-    Path inputArchive = new Path(inputRoot, HConstants.HFILE_ARCHIVE_DIRECTORY);
-    if (outputArchive == null) {
-      outputArchive = new Path(outputRoot, HConstants.HFILE_ARCHIVE_DIRECTORY);
-    } else {
-      outputArchive = new Path(outputRoot, outputArchive);
-    }
-
+    Configuration conf = getConf();
+    Path inputRoot = FSUtils.getRootDir(conf);
+    FileSystem inputFs = FileSystem.get(conf);
     FileSystem outputFs = FileSystem.get(outputRoot.toUri(), new Configuration());
-    FileSystem inputFs = FileSystem.get(getConf());
 
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, inputRoot);
     Path snapshotTmpDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshotName, outputRoot);
@@ -560,13 +573,13 @@ public final class ExportSnapshot extends Configured implements Tool {
     }
 
     // Step 0 - Extract snapshot files to copy
-    List<Pair<Path, Long>> snapshotFiles = getSnapshotFiles(inputFs, snapshotDir);
+    final List<Pair<Path, Long>> snapshotFiles = getSnapshotFiles(inputFs, snapshotDir);
 
     // Step 1 - Copy fs1:/.snapshot/<snapshot> to  fs2:/.snapshot/.tmp/<snapshot>
     // The snapshot references must be copied before the hfiles otherwise the cleaner
     // will remove them because they are unreferenced.
     try {
-      FileUtil.copy(inputFs, snapshotDir, outputFs, snapshotTmpDir, false, false, getConf());
+      FileUtil.copy(inputFs, snapshotDir, outputFs, snapshotTmpDir, false, false, conf);
     } catch (IOException e) {
       System.err.println("Failed to copy the snapshot directory: from=" + snapshotDir +
         " to=" + snapshotTmpDir);
@@ -578,28 +591,7 @@ public final class ExportSnapshot extends Configured implements Tool {
     // The snapshot references must be copied before the files otherwise the files gets removed
     // by the HFileArchiver, since they have no references.
     try {
-      Configuration conf = getConf();
-      conf.setBoolean(CONF_CHECKSUM_VERIFY, verifyChecksum);
-      conf.set(CONF_OUTPUT_ROOT, outputRoot.toString());
-      conf.set(CONF_OUTPUT_ARCHIVE, outputArchive.toString());
-      conf.set(CONF_INPUT_ROOT, inputRoot.toString());
-      conf.set(CONF_INPUT_ARCHIVE, inputArchive.toString());
-      conf.setInt("mapreduce.job.maps", mappers);
-
-      Job job = new Job(conf);
-      job.setJobName("ExportSnapshot");
-      job.setJarByClass(ExportSnapshot.class);
-      job.setMapperClass(ExportMapper.class);
-      job.setInputFormatClass(SequenceFileInputFormat.class);
-      job.setOutputFormatClass(NullOutputFormat.class);
-      job.setMapSpeculativeExecution(false);
-      job.setNumReduceTasks(0);
-      for (Path path: createInputFiles(conf, snapshotFiles, mappers)) {
-        LOG.debug("Add Input Path=" + path);
-        SequenceFileInputFormat.addInputPath(job, path);
-      }
-
-      if (!job.waitForCompletion(true)) {
+      if (!runCopyJob(inputRoot, outputRoot, verifyChecksum, snapshotFiles, mappers)) {
         throw new ExportSnapshotException("Snapshot export failed!");
       }
 
@@ -629,7 +621,6 @@ public final class ExportSnapshot extends Configured implements Tool {
     System.err.println("  -copy-to NAME           Remote destination hdfs://");
     System.err.println("  -no-checksum-verify     Do not verify checksum.");
     System.err.println("  -mappers                Number of mappers to use during the copy (mapreduce.job.maps).");
-    System.err.println("  -archive-dir            Path to the destination archive directory.");
     System.err.println();
     System.err.println("Examples:");
     System.err.println("  hbase " + getClass() + " \\");
