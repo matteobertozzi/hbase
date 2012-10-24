@@ -104,7 +104,7 @@ public abstract class TableSnapshotHandler extends TableEventHandler implements 
     LOG.info("Running table snapshot operation " + eventType + " on table " + tableNameStr);
     try {
       // write down the snapshot info in the working directory
-      SnapshotDescriptionUtils.writeSnasphotInfo(snapshot, workingDir, this.fs);
+      SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, workingDir, this.fs);
 
       List<HRegionInfo> regions = MetaReader.getTableRegions(this.server.getCatalogTracker(),
         tableName);

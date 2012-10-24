@@ -272,7 +272,7 @@ public class SnapshotDescriptionUtils {
    * @throws IOException if we can't reach the filesystem and the file cannot be cleaned up on
    *           failure
    */
-  public static void writeSnasphotInfo(SnapshotDescription snapshot, Path workingDir, FileSystem fs)
+  public static void writeSnapshotInfo(SnapshotDescription snapshot, Path workingDir, FileSystem fs)
       throws IOException {
     Path snapshotInfo = new Path(workingDir, SnapshotDescriptionUtils.SNAPSHOTINFO_FILE);
     try {

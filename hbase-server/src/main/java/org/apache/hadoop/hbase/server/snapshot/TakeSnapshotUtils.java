@@ -115,7 +115,7 @@ public class TakeSnapshotUtils {
    * @param regionName encoded name of the region (see {@link HRegionInfo#encodeRegionName(byte[])})
    * @return path to the per-region directory for the snapshot
    */
-  public static Path getRegionSnaphshotDirectory(SnapshotDescription desc, Path rootDir,
+  public static Path getRegionSnapshotDirectory(SnapshotDescription desc, Path rootDir,
       String regionName) {
     Path snapshotDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir);
     return HRegion.getRegionDir(snapshotDir, regionName);
@@ -126,7 +126,7 @@ public class TakeSnapshotUtils {
    * <p>
    * Specific files per store are kept in a similar layout as per the current directory layout.
    * @param regionDir snapshot directory for the parent region, <b>not</b> the standard region
-   *          directory. See {@link #getRegionSnaphshotDirectory(SnapshotDescription, Path, String)}
+   *          directory. See {@link #getRegionSnapshotDirectory(SnapshotDescription, Path, String)}
    * @param family name of the store to snapshot
    * @return path to the snapshot home directory for the store/family
    */
@@ -148,7 +148,7 @@ public class TakeSnapshotUtils {
     if (families == null || families.length == 0) return Collections.emptyList();
 
     List<Path> familyDirs = new ArrayList<Path>(families.length);
-    Path snapshotRegionDir = TakeSnapshotUtils.getRegionSnaphshotDirectory(snapshot, rootDir, name);
+    Path snapshotRegionDir = TakeSnapshotUtils.getRegionSnapshotDirectory(snapshot, rootDir, name);
     for (FileStatus family : families) {
       // build the reference directory name
       familyDirs.add(TakeSnapshotUtils.getStoreSnapshotDirectory(snapshotRegionDir, family

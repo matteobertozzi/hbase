@@ -2507,7 +2507,7 @@ Server {
       // Switch name and write the new info
       SnapshotDescription snapshot = SnapshotDescriptionUtils.readSnapshotInfo(fs, newTmpDir);
       snapshot = snapshot.toBuilder().setName(request.getNewName()).build();
-      SnapshotDescriptionUtils.writeSnasphotInfo(snapshot, newTmpDir, fs);
+      SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, newTmpDir, fs);
 
       // Move back the snapshot
       if (!fs.rename(newTmpDir, newDir)) {
