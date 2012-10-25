@@ -708,9 +708,9 @@ public final class HConstants {
 
   /**
    * Name of the directory to store snapshots all snapshots. See SnasphotDescriptionUtils for
-   * remaining snapshot constants.
+   * remaining snapshot constants; this is here to keep HConstants dependencies at a minimum and
+   * uni-directional.
    */
-  // this is here to keep HConstants dependencies at a minimum and uni-directional.
   public static final String SNAPSHOT_DIR_NAME = ".snapshot";
 
   public static final List<String> HBASE_NON_USER_TABLE_DIRS = new ArrayList<String>(

@@ -83,9 +83,9 @@ public class TestSnapshotManager {
     SnapshotHandler handler = Mockito.mock(SnapshotHandler.class);
     assertFalse("Manager is in process when there is no current handler", manager.isTakingSnapshot());
     manager.setSnapshotHandlerForTesting(handler);
-    Mockito.when(handler.getFinished()).thenReturn(false);
+    Mockito.when(handler.isFinished()).thenReturn(false);
     assertTrue("Manager isn't in process when handler is running", manager.isTakingSnapshot());
-    Mockito.when(handler.getFinished()).thenReturn(true);
+    Mockito.when(handler.isFinished()).thenReturn(true);
     assertFalse("Manager is process when handler isn't running", manager.isTakingSnapshot());
   }
 

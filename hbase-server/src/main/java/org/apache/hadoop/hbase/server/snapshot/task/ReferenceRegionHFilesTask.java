@@ -111,7 +111,9 @@ public class ReferenceRegionHFilesTask extends SnapshotTask {
       for (FileStatus hfile : hfiles) {
         Path referenceFile = new Path(snapshotFamilyDir, hfile.getPath().getName());
         LOG.debug("Creating reference for:" + hfile.getPath() + " at " + referenceFile);
-        fs.createNewFile(referenceFile);
+        if (!fs.createNewFile(referenceFile)) {
+          throw new IOException("Failed to create reference file:" + referenceFile);
+        }
       }
     }
     if (LOG.isDebugEnabled()) {

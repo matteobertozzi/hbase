@@ -76,7 +76,7 @@ public class SnapshotManager implements Stoppable {
    * @throws SnapshotCreationException if the snapshot failed
    */
   public boolean isTakingSnapshot() throws SnapshotCreationException {
-    return handler != null && !handler.getFinished();
+    return handler != null && !handler.isFinished();
   }
 
   /**
@@ -171,15 +171,6 @@ public class SnapshotManager implements Stoppable {
   @Override
   public boolean isStopped() {
     return this.stopped;
-  }
-
-  /**
-   * Reset the state of the snapshot handler.
-   * <p>
-   * Exposed for TESTING.
-   */
-  public void resetForTesting() {
-    setSnapshotHandlerForTesting(null);
   }
 
   /**

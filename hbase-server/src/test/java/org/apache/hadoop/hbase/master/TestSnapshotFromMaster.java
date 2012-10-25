@@ -97,7 +97,7 @@ public class TestSnapshotFromMaster {
 
   @Before
   public void setup() throws Exception {
-    master.getSnapshotManagerForTesting().resetForTesting();
+    master.getSnapshotManagerForTesting().setSnapshotHandlerForTesting(null);
   }
 
   @After
@@ -141,7 +141,7 @@ public class TestSnapshotFromMaster {
     DisabledTableSnapshotHandler mockHandler = Mockito.mock(DisabledTableSnapshotHandler.class);
     Mockito.when(mockHandler.getExceptionIfFailed()).thenReturn(null);
     Mockito.when(mockHandler.getSnapshot()).thenReturn(desc);
-    Mockito.when(mockHandler.getFinished()).thenReturn(new Boolean(true));
+    Mockito.when(mockHandler.isFinished()).thenReturn(new Boolean(true));
 
     master.getSnapshotManagerForTesting().setSnapshotHandlerForTesting(mockHandler);
 

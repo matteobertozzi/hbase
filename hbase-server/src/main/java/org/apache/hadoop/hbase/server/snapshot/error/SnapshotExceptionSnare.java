@@ -26,7 +26,7 @@ import org.apache.hadoop.hbase.snapshot.exception.UnexpectedSnapshotException;
  * {@link ExceptionSnare} for snapshot exceptions, ensuring that only the first exception is
  * retained and always returned via {@link #failOnError()}.
  * <p>
- * Ensures than any generic exceptions received via
+ * Ensures that any generic exceptions received via
  * {@link #receiveError(String, HBaseSnapshotException, Object...)} are in fact propagated as
  * {@link HBaseSnapshotException}.
  */

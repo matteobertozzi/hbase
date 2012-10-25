@@ -198,7 +198,7 @@ public class DisabledTableSnapshotHandler extends EventHandler implements Snapsh
   }
 
   @Override
-  public boolean getFinished() {
+  public boolean isFinished() {
     return this.finished;
   }
 

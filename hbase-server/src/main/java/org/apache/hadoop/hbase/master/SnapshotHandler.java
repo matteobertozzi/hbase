@@ -35,7 +35,7 @@ public interface SnapshotHandler extends Stoppable {
    * @return <tt>false</tt> if the snapshot is still in progress, <tt>true</tt> if the snapshot has
    *         finished (regardless of success or not)
    */
-  public boolean getFinished();
+  public boolean isFinished();
 
   /**
    * @return the description of the snapshot being run

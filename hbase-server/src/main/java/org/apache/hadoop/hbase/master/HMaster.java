@@ -2433,7 +2433,7 @@ Server {
         Path info = new Path(snapshot.getPath(), SnapshotDescriptionUtils.SNAPSHOTINFO_FILE);
         // if the snapshot is bad
         if (!fs.exists(info)) {
-          LOG.error("Snapshot infor for " + snapshot.getPath() + " doesn't exist");
+          LOG.error("Snapshot information for " + snapshot.getPath() + " doesn't exist");
           continue;
         }
         FSDataInputStream in = null;
@@ -2506,11 +2506,11 @@ Server {
         SnapshotDescription snapshot = sentinel.getSnapshot();
         LOG.debug("Have a snapshot to compare:" + snapshot);
         if (expected.getName().equals(snapshot.getName())) {
-          LOG.trace("Running snapshot (" + snapshot.getName() + ") does matches request:"
+          LOG.trace("Running snapshot (" + snapshot.getName() + ") does match request:"
               + expected.getName());
 
           // check to see if we are done
-          if (sentinel.getFinished()) {
+          if (sentinel.isFinished()) {
             builder.setDone(true);
             LOG.debug("Snapshot " + snapshot + " has completed, notifying client.");
           } else if (LOG.isDebugEnabled()) {
