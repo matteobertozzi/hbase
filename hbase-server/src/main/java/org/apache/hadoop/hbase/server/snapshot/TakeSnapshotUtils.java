@@ -174,33 +174,60 @@ public class TakeSnapshotUtils {
 
   public static void verifyAllLogsGotReferenced(FileSystem fs, Path logsDir, SnapshotDescription snapshot,
  Path snapshotLogDir) throws IOException {
-    assertTrue("Logs directory doesn't exist in snapshot", fs.exists(logsDir));
-    // for each of the server log dirs, make sure it matches the main directory
-    Multimap<String, String> snapshotLogs = getMapOfServersAndLogs(fs, snapshotLogDir);
-    Multimap<String, String> realLogs = getMapOfServersAndLogs(fs, logsDir);
-    if (realLogs != null) {
-      assertNotNull("No server logs added to snapshot", snapshotLogs);
-    } else if (realLogs == null) {
-      assertNull("Snapshotted server logs that don't exist", snapshotLogs);
-    }
-    // check the number of servers
-    Set<Entry<String, Collection<String>>> serverEntries = realLogs.asMap().entrySet();
-    Set<Entry<String, Collection<String>>> snapshotEntries = snapshotLogs.asMap().entrySet();
-    assertEquals("Not the same number of snapshot and original server logs directories", serverEntries.size(), snapshotEntries.size());
-
-    // verify we snapshotted each of the log files
-    for(Entry<String, Collection<String>> serverLogs : serverEntries){
-      Collection<String> snapshotServerLogs = snapshotLogs.get(serverLogs.getKey());
-      assertNotNull("Snapshots missing logs for server:"+serverLogs.getKey(), snapshotServerLogs);
-
-      // check each of the log files
-      assertEquals("Didn't reference all the log files for server:" + serverLogs.getKey(),
-        serverLogs.getValue().size(), snapshotServerLogs.size());
-      for (String log : serverLogs.getValue()) {
-        assertTrue("Snapshot logs didn't include " + log, snapshotServerLogs.contains(log));
-      }
-    }
+	  String returnMessage = didAllLogsGetReferenced(fs, logsDir, snapshot, snapshotLogDir);
+	  assertNull(returnMessage, returnMessage);
   }
+  
+  public static String didAllLogsGetReferenced(FileSystem fs, Path logsDir, SnapshotDescription snapshot,
+ Path snapshotLogDir) throws IOException {
+	  
+		// for each of the server log dirs, make sure it matches the main
+		// directory
+		if (!fs.exists(logsDir))
+			return "Logs directory doesn't exist in snapshot";
+
+		Multimap<String, String> snapshotLogs = getMapOfServersAndLogs(fs,
+				snapshotLogDir);
+		Multimap<String, String> realLogs = getMapOfServersAndLogs(fs, logsDir);
+		if (realLogs != null) {
+
+			if (snapshotLogs == null)
+				return "No server logs added to snapshot";
+		} else if (realLogs == null) {
+
+			if (snapshotLogs != null)
+				return "Snapshotted server logs that don't exist";
+		}
+	    // check the number of servers
+		Set<Entry<String, Collection<String>>> serverEntries = realLogs.asMap()
+				.entrySet();
+		Set<Entry<String, Collection<String>>> snapshotEntries = snapshotLogs
+				.asMap().entrySet();
+		if (serverEntries.size() != snapshotEntries.size())
+			return "Not the same number of snapshot and original server logs directories";
+
+		// verify we snapshotted each of the log files
+	    for(Entry<String, Collection<String>> serverLogs : serverEntries){
+	      Collection<String> snapshotServerLogs = snapshotLogs.get(serverLogs.getKey());
+	   
+			if (snapshotServerLogs == null)
+				return "Snapshots missing logs for server:"
+						+ serverLogs.getKey();
+     
+			// check each of the log files
+			if (serverLogs.getValue().size() != snapshotServerLogs.size())
+				return "Didn't reference all the log files for server:"
+						+ serverLogs.getKey();
+     
+			for (String log : serverLogs.getValue()) {
+				if (!snapshotServerLogs.contains(log))
+					return "Snapshot logs didn't include " + log;
+			}
+	    }
+	  
+	  return null;
+  }
+  
 
   private static void assertNull(String msg, Object isNull) throws CorruptedSnapshotException {
     if (isNull != null) {

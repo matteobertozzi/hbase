@@ -18,13 +18,15 @@
 package org.apache.hadoop.hbase.snapshot;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
@@ -94,42 +96,111 @@ public class SnapshotTestingUtils {
     return assertOneSnapshotThatMatches(admin, Bytes.toString(snapshot), Bytes.toString(tableName));
   }
 
+  
+	/**
+	 * Multi-family version of the confirmSnapshotValid function
+	 */
+	public static void confirmSnapshotValid(
+			SnapshotDescription snapshotDescriptor, byte[] tableName,
+			List<byte[]> testFamilies, Path rootDir, HBaseAdmin admin,
+			FileSystem fs, boolean requireLogs, Path logsDir)
+			throws IOException {
+
+		if (testFamilies == null)
+			throw new IllegalArgumentException("testFamilies cannot be null");
+
+		for (byte[] testFamily : testFamilies) {
+
+			confirmSnapshotValid(snapshotDescriptor, tableName, testFamily,
+					rootDir, admin, fs, requireLogs, logsDir);
+		}
+	}
+  
   /**
    * Confirm that the snapshot contains references to all the files that should be in the snapshot
    */
-  public static void confirmSnapshotValid(SnapshotDescription snapshotDescriptor, byte[] tableName,
-      byte[] testFamily, Path rootDir, HBaseAdmin admin, FileSystem fs, boolean requireLogs,
-      Path logsDir)
-      throws IOException {
-    Path snapshotDir = SnapshotDescriptionUtils
-        .getCompletedSnapshotDir(snapshotDescriptor, rootDir);
-    assertTrue(fs.exists(snapshotDir));
-    Path snapshotinfo = new Path(snapshotDir, SnapshotDescriptionUtils.SNAPSHOTINFO_FILE);
-    assertTrue(fs.exists(snapshotinfo));
-    // check the logs dir
-    if (requireLogs) {
-      TakeSnapshotUtils.verifyAllLogsGotReferenced(fs,
-        logsDir, snapshotDescriptor, new Path(snapshotDir, HConstants.HREGION_LOGDIR_NAME));
-    }
-    // check the table info
-    HTableDescriptor desc = FSTableDescriptors.getTableDescriptor(fs, rootDir, tableName);
-    HTableDescriptor snapshotDesc = FSTableDescriptors.getTableDescriptor(fs, snapshotDir);
-    assertEquals(desc, snapshotDesc);
+	public static void confirmSnapshotValid(
+			SnapshotDescription snapshotDescriptor, byte[] tableName,
+			byte[] testFamily, Path rootDir, HBaseAdmin admin, FileSystem fs,
+			boolean requireLogs, Path logsDir) throws IOException {
 
-    // check the region snapshot for all the regions
-    List<HRegionInfo> regions = admin.getTableRegions(tableName);
-    for (HRegionInfo info : regions) {
-      String regionName = info.getEncodedName();
-      Path regionDir = new Path(snapshotDir, regionName);
-      HRegionInfo snapshotRegionInfo = HRegion.loadDotRegionInfoFileContent(fs, regionDir);
-      assertEquals(info, snapshotRegionInfo);
-      // check to make sure we have the family
-      Path familyDir = new Path(regionDir, Bytes.toString(testFamily));
-      assertTrue(fs.exists(familyDir));
-      // make sure we have some files references
-      assertTrue(fs.listStatus(familyDir).length > 0);
-    }
-  }
+		Assert.assertTrue(
+				"Snapshot is not valid",
+				isSnapshotValid(snapshotDescriptor, tableName, testFamily,
+						rootDir, admin, fs, requireLogs, logsDir));
+	}
+
+    //Broke this out into its own function so that it is easier to test and can be used to detect illegal state without failing the test.
+	public static boolean isSnapshotValid(
+			SnapshotDescription snapshotDescriptor, byte[] tableName,
+			byte[] testFamily, Path rootDir, HBaseAdmin admin, FileSystem fs,
+			boolean requireLogs, Path logsDir) throws IOException {
+
+		Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(
+				snapshotDescriptor, rootDir);
+
+		if (!fs.exists(snapshotDir)) {
+			return false;
+		}
+
+		Path snapshotinfo = new Path(snapshotDir,
+				SnapshotDescriptionUtils.SNAPSHOTINFO_FILE);
+
+		if (!fs.exists(snapshotinfo)) {
+			return false;
+		}
+
+		// check the logs dir
+		if (requireLogs) {
+			if(TakeSnapshotUtils.didAllLogsGetReferenced(fs, logsDir, snapshotDescriptor,  new Path(snapshotDir,HConstants.HREGION_LOGDIR_NAME))!=null) {
+				return false;
+			}			
+		}
+		// check the table info
+		HTableDescriptor desc = FSTableDescriptors.getTableDescriptor(fs,
+				rootDir, tableName);
+		HTableDescriptor snapshotDesc = FSTableDescriptors.getTableDescriptor(
+				fs, snapshotDir);
+
+		if (!desc.equals(snapshotDesc)) {
+
+			return false;
+		}
+
+		// check the region snapshot for all the regions
+		List<HRegionInfo> regions = admin.getTableRegions(tableName);
+		for (HRegionInfo info : regions) {
+			String regionName = info.getEncodedName();
+			Path snapshotRegionDir = new Path(snapshotDir, regionName);
+
+			HRegionInfo snapshotRegionInfo = HRegion
+					.loadDotRegionInfoFileContent(fs, snapshotRegionDir);
+			if (!info.equals(snapshotRegionInfo)) {
+
+				return false;
+			}
+
+			// check to make sure we have the family
+			Path snapshotFamilyDir = new Path(snapshotRegionDir, Bytes.toString(testFamily));
+			if (!fs.exists(snapshotFamilyDir)) {
+				return false;
+			}
+
+			// make sure we have some files references
+			FileStatus[] snapshotFamilyFilearchives = fs.listStatus(snapshotFamilyDir);
+			if (!(snapshotFamilyFilearchives.length > 0)) {
+				return false;
+			}
+			
+			//Get all the hfiles for a region on a particular family
+			Path regionDir = new Path(new Path(rootDir, Bytes.toString(tableName)), regionName);
+			Path tableFamilyDir = new Path(regionDir, Bytes.toString(testFamily));
+			if(!allHFilesInTablePresentInSnapshot(Bytes.toString(tableName), fs.listStatus(tableFamilyDir), snapshotFamilyFilearchives)) {
+				return false;
+			}
+		}
+		return true;
+	}
 
   /**
    * Helper method for testing async snapshot operations. Just waits for the given snapshot to
@@ -184,5 +255,29 @@ public class SnapshotTestingUtils {
         Assert.fail("Threw an unexpected exception:" + t);
       }
     }
+  }
+  
+  //Designed to compare two sets of files, namespaced by region and CF. 
+  private static boolean allHFilesInTablePresentInSnapshot(String tableName, FileStatus[] tableHFiles, FileStatus[] snapshotHFileArchives) {
+	  
+	  if(tableHFiles.length!=snapshotHFileArchives.length)
+		  return false;
+	  
+	  Set<String> snapshotHFileArchiveSet = new HashSet<String>(snapshotHFileArchives.length);
+	  for(FileStatus status : snapshotHFileArchives) {
+		  
+		  snapshotHFileArchiveSet.add(status.getPath().getName());
+	  }
+	  
+	  for(FileStatus tableHFile : tableHFiles) {
+		  
+		  String hFileName = tableHFile.getPath().getName();
+		  String hFileArchiveName = hFileName + "." + tableName;
+		  if(!snapshotHFileArchiveSet.contains(hFileArchiveName)) {
+			  return false;
+		  }
+	  }
+	  
+	  return true;
   }
 }
