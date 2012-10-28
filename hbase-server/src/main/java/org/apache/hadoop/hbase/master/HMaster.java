@@ -2457,8 +2457,8 @@ Server {
           "Error while geting table description for table " + snapshot.getTable(), e, snapshot));
     }
     if (desc == null) {
-      throw new ServiceException(new SnapshotCreationException("Table:" + snapshot.getTable()
-          + " doens't exist, can't take snapshot.", snapshot));
+      throw new ServiceException(new SnapshotCreationException("Table: " + snapshot.getTable()
+          + " doesn't exist, therefore we cannot take a snapshot.", snapshot));
     }
 
     // set the snapshot version, now that we are ready to take it

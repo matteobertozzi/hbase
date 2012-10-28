@@ -340,8 +340,8 @@ public class SnapshotTestingUtils {
 	  for(FileStatus tableHFile : tableHFiles) {
 		  
 		  String hFileName = tableHFile.getPath().getName();
-		  String hFileArchiveName = hFileName + "." + tableName;
-		  if(!snapshotHFileArchiveSet.contains(hFileArchiveName)) {
+		  //String hFileArchiveName = hFileName + "." + tableName; //TODO: remove this. This is an artifact of the old naming style
+		  if(!snapshotHFileArchiveSet.contains(hFileName)) {
 			  return false;
 		  }
 	  }
