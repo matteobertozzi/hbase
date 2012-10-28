@@ -30,6 +30,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -39,13 +40,16 @@ import org.apache.hadoop.hbase.master.snapshot.SnapshotCleaner;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
+import org.apache.hadoop.hbase.server.snapshot.TakeSnapshotUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.util.GenericsUtil;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -120,15 +124,151 @@ public class TestSnapshotFromClient {
   }
 
   /**
+   * Verify that if a file necessary for a snapshot is deleted, then that should invalidate the snapshot
+   * @throws Exception
+   */
+  @Test
+  public void testSnapshotInvalidAfterFileDeleted() throws Exception {
+	  
+		FileSystem fs = UTIL.getHBaseCluster().getMaster()
+				.getMasterFileSystem().getFileSystem();
+		Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem()
+				.getRootDir();
+
+		HBaseAdmin admin = UTIL.getHBaseAdmin();
+		final long startTime = System.currentTimeMillis();
+		final String localTableNameAsString = STRING_TABLE_NAME + startTime;
+		final byte[] localTableName = Bytes.toBytes(localTableNameAsString);
+		HTableDescriptor htd = new HTableDescriptor(localTableName);
+		HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAM);
+		htd.addFamily(hcd);
+		admin.createTable(htd);
+		
+		HTable table = new HTable(UTIL.getConfiguration(), localTableName);
+
+		// add some data
+		UTIL.loadTable(table, TEST_FAM);
+
+		// create a snapshot and assert that it is valid
+	   admin.disableTable(localTableName);
+		
+		byte[] snapshotName = Bytes.toBytes("offlineTableSnapshot" + startTime);
+		admin.snapshot(snapshotName, localTableName);
+
+		List<SnapshotDescription> snapshots = SnapshotTestingUtils
+				.assertOneSnapshotThatMatches(admin, snapshotName, localTableName);
+
+		if(snapshots==null || snapshots.size()!=1) {
+			Assert.fail("Incorrect number of snapshots for table " + String.valueOf(localTableName));  
+		}
+		
+		try {
+		SnapshotTestingUtils.confirmSnapshotValid(snapshots.get(0), localTableName,
+				TEST_FAM, rootDir, admin, fs, false, new Path(rootDir,
+						HConstants.HREGION_LOGDIR_NAME));
+		
+		
+		//List all the table regions
+		FileStatus[] localTableRegions = fs.listStatus(new Path(rootDir, localTableNameAsString));
+		Path regionPath = localTableRegions[localTableRegions.length-1].getPath(); //it's the last one, since the first two are .tmp and .tableInfo.
+		FileStatus[] regionFiles = fs.listStatus(regionPath);
+		Path hFilePath = regionFiles[regionFiles.length-1].getPath(); //it's the last one, since the first two are .tmp and .tableInfo.
+		FileStatus[] hFiles = fs.listStatus(hFilePath);
+		
+		Path snapshotDir = new Path(rootDir, ".snapshot");
+		FileStatus[] snapshotDirFileStatuses = fs.listStatus(snapshotDir);
+		Path localTableSnapshotPath = snapshotDirFileStatuses[1].getPath();
+		FileStatus[] localTableSnapshotRegionpath =  fs.listStatus(localTableSnapshotPath);
+		Path regionpath = localTableSnapshotRegionpath[localTableSnapshotRegionpath.length-1].getPath();
+		FileStatus[] familyList = fs.listStatus(regionpath);
+		Path familyPath = familyList[familyList.length-1].getPath();
+		FileStatus[] hFileArchives = fs.listStatus(familyPath);
+		
+		Assert.assertTrue("No archives for this family", hFileArchives.length>0);
+		Path hFileArchive = hFileArchives[0].getPath();
+		fs.delete(hFileArchive, true);
+		
+		FileStatus[] files = fs.listStatus(familyPath);
+		
+		Assert.assertEquals("File was not deleted.", hFiles.length-1,files.length);
+		
+		//verify that the snapshot file is valid
+		 Assert.assertFalse("The snapshot remains valid even though we deleted one of its constituent files", SnapshotTestingUtils.isSnapshotValid(snapshots.get(0), localTableName, TEST_FAM, rootDir,
+			      admin, fs, false, new Path(rootDir, HConstants.HREGION_LOGDIR_NAME)));
+		} finally {
+			
+			admin.deleteSnapshot(snapshotName);
+		}
+  }
+
+	/**
+	 * Verify that if a table is deleted, the snapshot still persists
+	 */
+	@Test
+	public void testSnapshotPersistsAfterTableDeleted() throws Exception {
+
+		FileSystem fs = UTIL.getHBaseCluster().getMaster()
+				.getMasterFileSystem().getFileSystem();
+		Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem()
+				.getRootDir();
+
+		HBaseAdmin admin = UTIL.getHBaseAdmin();
+		final long startTime = System.currentTimeMillis();
+		final byte[] localTableName = Bytes.toBytes(STRING_TABLE_NAME
+				+ startTime);
+		HTableDescriptor htd = new HTableDescriptor(localTableName);
+		HColumnDescriptor hcd = new HColumnDescriptor(TEST_FAM);
+		htd.addFamily(hcd);
+		admin.createTable(htd);
+
+		HTable table = new HTable(UTIL.getConfiguration(), localTableName);
+
+		// add some data
+		UTIL.loadTable(table, TEST_FAM);
+
+		// create a snapshot and assert that it is valid
+		admin.disableTable(localTableName);
+
+		byte[] snapshot = Bytes.toBytes("offlineTableSnapshot" + startTime);
+		admin.snapshot(snapshot, localTableName);
+
+		List<SnapshotDescription> snapshots = SnapshotTestingUtils
+				.assertOneSnapshotThatMatches(admin, snapshot, localTableName);
+
+		if (snapshots == null || snapshots.size() != 1) {
+			Assert.fail("Incorrect number of snapshots for table "
+					+ String.valueOf(localTableName));
+		}
+
+		try {
+
+			SnapshotTestingUtils.confirmSnapshotValid(snapshots.get(0),
+					localTableName, TEST_FAM, rootDir, admin, fs, false,
+					new Path(rootDir, HConstants.HREGION_LOGDIR_NAME));
+
+			// delete table
+			admin.deleteTable(localTableName);
+			snapshots = SnapshotTestingUtils.assertOneSnapshotThatMatches(
+					admin, snapshot, localTableName);
+
+			if (snapshots == null || snapshots.size() != 1) {
+				Assert.fail("Incorrect number of snapshots for table "
+						+ String.valueOf(localTableName));
+			}
+		} finally {
+
+			admin.deleteSnapshot(snapshot);
+		}
+	}
+  
+  /**
    * Test snapshotting a table that is offline
    * @throws Exception
    */
   @Test
-  public void testOfflineTableSnapshot() throws Exception {
+  public void testOfflineSnapshotFilesCreated() throws Exception {
     HBaseAdmin admin = UTIL.getHBaseAdmin();
-    // make sure we don't fail on listing snapshots
-    SnapshotTestingUtils.assertNoSnapshots(admin);
-
+    
     // put some stuff in the table
     HTable table = new HTable(UTIL.getConfiguration(), TABLE_NAME);
     UTIL.loadTable(table, TEST_FAM);
