@@ -30,11 +30,8 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
-import java.util.SortedMap;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -47,6 +44,10 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.Chore;
@@ -61,7 +62,6 @@ import org.apache.hadoop.hbase.MasterMonitorProtocol;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.PleaseHoldException;
-import org.apache.hadoop.hbase.RegionLoad;
 import org.apache.hadoop.hbase.RegionServerStatusProtocol;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerLoad;
@@ -79,12 +79,15 @@ import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitor;
 import org.apache.hadoop.hbase.client.MetaScanner.MetaScannerVisitorBase;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.executor.EventHandler;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorType;
 import org.apache.hadoop.hbase.ipc.HBaseRPC;
 import org.apache.hadoop.hbase.ipc.HBaseServer;
 import org.apache.hadoop.hbase.ipc.ProtocolSignature;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.master.balancer.BalancerChore;
+import org.apache.hadoop.hbase.master.balancer.ClusterStatusChore;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
@@ -100,6 +103,9 @@ import org.apache.hadoop.hbase.master.handler.TableEventHandler;
 import org.apache.hadoop.hbase.master.handler.TableModifyFamilyHandler;
 import org.apache.hadoop.hbase.master.metrics.MasterMetrics;
 import org.apache.hadoop.hbase.master.metrics.MasterMetricsWrapperImpl;
+import org.apache.hadoop.hbase.master.snapshot.SnapshotCleaner;
+import org.apache.hadoop.hbase.master.snapshot.TableSnapshotHandler;
+import org.apache.hadoop.hbase.master.snapshot.manage.SnapshotManager;
 import org.apache.hadoop.hbase.monitoring.MemoryBoundedLogMessageBuffer;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -108,6 +114,7 @@ import org.apache.hadoop.hbase.protobuf.ResponseConverter;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AddColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AddColumnResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.AssignRegionRequest;
@@ -120,6 +127,8 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableR
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.CreateTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteColumnResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DisableTableRequest;
@@ -130,6 +139,12 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableR
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.EnableTableResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsCatalogJanitorEnabledResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyColumnRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyColumnResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ModifyTableRequest;
@@ -138,12 +153,18 @@ import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionRe
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.MoveRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.OfflineRegionResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.SetBalancerRunningResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ShutdownResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.StopMasterResponse;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotRequest;
+import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.TakeSnapshotResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.UnassignRegionResponse;
 import org.apache.hadoop.hbase.protobuf.generated.MasterMonitorProtos.GetClusterStatusRequest;
@@ -164,9 +185,21 @@ import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.Repor
 import org.apache.hadoop.hbase.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse;
 import org.apache.hadoop.hbase.replication.regionserver.Replication;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.snapshot.exception.HBaseSnapshotException;
+import org.apache.hadoop.hbase.snapshot.exception.SnapshotCreationException;
+import org.apache.hadoop.hbase.snapshot.exception.SnapshotDoesNotExistsException;
+import org.apache.hadoop.hbase.snapshot.exception.SnapshotExistsException;
+import org.apache.hadoop.hbase.snapshot.exception.RenameSnapshotException;
+import org.apache.hadoop.hbase.snapshot.exception.RestoreSnapshotException;
+import org.apache.hadoop.hbase.snapshot.exception.TablePartiallyOpenException;
+import org.apache.hadoop.hbase.snapshot.exception.UnknownSnapshotException;
+import org.apache.hadoop.hbase.snapshot.restore.RestoreSnapshotHelper;
+import org.apache.hadoop.hbase.trace.SpanReceiverHost;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.HasThread;
 import org.apache.hadoop.hbase.util.InfoServer;
@@ -187,6 +220,7 @@ import org.apache.hadoop.net.DNS;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Watcher;
 import org.apache.hadoop.hbase.trace.SpanReceiverHost;
+import org.apache.hadoop.hbase.util.FSUtils;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -284,6 +318,7 @@ Server {
 
   private LoadBalancer balancer;
   private Thread balancerChore;
+  private Thread clusterStatusChore;
 
   private CatalogJanitor catalogJanitorChore;
   private LogCleaner logCleaner;
@@ -309,6 +344,10 @@ Server {
   private final boolean masterCheckCompression;
 
   private SpanReceiverHost spanReceiverHost;
+
+  // monitor for snapshot of hbase tables
+  private SnapshotManager snapshotManager;
+
   /**
    * Initializes the HMaster. The steps are as follows:
    * <p>
@@ -324,6 +363,8 @@ Server {
   public HMaster(final Configuration conf)
   throws IOException, KeeperException, InterruptedException {
     this.conf = new Configuration(conf);
+    LOG.info("hbase.rootdir=" + FSUtils.getRootDir(this.conf) +
+      ", hbase.cluster.distributed=" + this.conf.getBoolean("hbase.cluster.distributed", false));
     // Disable the block cache on the master
     this.conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
     // Set how many times to retry talking to another server over HConnection.
@@ -333,7 +374,7 @@ Server {
       conf.get("hbase.master.dns.interface", "default"),
       conf.get("hbase.master.dns.nameserver", "default")));
     int port = conf.getInt(HConstants.MASTER_PORT, HConstants.DEFAULT_MASTER_PORT);
-    // Creation of a HSA will force a resolve.
+    // Creation of a ISA will force a resolve.
     InetSocketAddress initialIsa = new InetSocketAddress(hostname, port);
     if (initialIsa.getAddress() == null) {
       throw new IllegalArgumentException("Failed resolve of " + initialIsa);
@@ -540,6 +581,14 @@ Server {
         ", sessionid=0x" +
         Long.toHexString(this.zooKeeper.getRecoverableZooKeeper().getSessionId()) +
         ", cluster-up flag was=" + wasUp);
+    
+    // create the snapshot monitor
+    // TODO should this be config based?
+    // TODO do we really need a full reference to the master or can we pull out
+    // an interface? MasterFileSystem seems to mostly what it needs
+    // manager does its down event tracking via the internal monitor, so we don't
+    // need to incldue a special event handler
+    this.snapshotManager = new SnapshotManager(this, zooKeeper);
   }
 
   /**
@@ -657,7 +706,7 @@ Server {
 
     // Wait for region servers to report in.
     this.serverManager.waitForRegionServers(status);
-    // Check zk for regionservers that are up but didn't register
+    // Check zk for region servers that are up but didn't register
     for (ServerName sn: this.regionServerTracker.getOnlineServers()) {
       if (!this.serverManager.isServerOnline(sn)) {
         // Not registered; add it.
@@ -686,7 +735,7 @@ Server {
       .updateRootAndMetaIfNecessary(this);
 
     this.balancer.setMasterServices(this);
-    // Fixup assignment manager status
+    // Fix up assignment manager status
     status.setStatus("Starting assignment manager");
     this.assignmentManager.joinCluster();
 
@@ -700,6 +749,7 @@ Server {
       // Start balancer and meta catalog janitor after meta and regions have
       // been assigned.
       status.setStatus("Starting balancer and catalog janitor");
+      this.clusterStatusChore = getAndStartClusterStatusChore(this);
       this.balancerChore = getAndStartBalancerChore(this);
       this.catalogJanitorChore = new CatalogJanitor(this, this);
       startCatalogJanitorChore();
@@ -760,12 +810,11 @@ Server {
   /**
    * If ServerShutdownHandler is disabled, we enable it and expire those dead
    * but not expired servers.
-   * @throws IOException
    */
-  private void enableServerShutdownHandler() throws IOException {
+  private void enableServerShutdownHandler() {
     if (!serverShutdownHandlerEnabled) {
       serverShutdownHandlerEnabled = true;
-      this.serverManager.expireDeadNotExpiredServers();
+      this.serverManager.processQueuedDeadServers();
     }
   }
 
@@ -840,7 +889,7 @@ Server {
       enableSSHandWaitForMeta();
       assigned++;
     } else {
-      // Region already assigned.  We didnt' assign it.  Add to in-memory state.
+      // Region already assigned.  We didn't assign it.  Add to in-memory state.
       this.assignmentManager.regionOnline(HRegionInfo.FIRST_META_REGIONINFO,
         this.catalogTracker.getMetaLocation());
     }
@@ -906,8 +955,11 @@ Server {
     // Now work on our list of found parents. See if any we can clean up.
     int fixups = 0;
     for (Map.Entry<HRegionInfo, Result> e : offlineSplitParents.entrySet()) {
-      fixups += ServerShutdownHandler.fixupDaughters(
+      ServerName sn = HRegionInfo.getServerName(e.getValue());
+      if (!serverManager.isServerDead(sn)) { // Otherwise, let SSH take care of it
+        fixups += ServerShutdownHandler.fixupDaughters(
           e.getValue(), assignmentManager, catalogTracker);
+      }
     }
     if (fixups != 0) {
       LOG.info("Scanned the catalog and fixed up " + fixups +
@@ -1083,23 +1135,26 @@ Server {
     if (this.executorService != null) this.executorService.shutdown();
   }
 
+  private static Thread getAndStartClusterStatusChore(HMaster master) {
+    if (master == null || master.balancer == null) {
+      return null;
+    }
+    Chore chore = new ClusterStatusChore(master, master.balancer);
+    return Threads.setDaemonThreadRunning(chore.getThread());
+  }
+
   private static Thread getAndStartBalancerChore(final HMaster master) {
-    String name = master.getServerName() + "-BalancerChore";
-    int balancerPeriod =
-      master.getConfiguration().getInt("hbase.balancer.period", 300000);
     // Start up the load balancer chore
-    Chore chore = new Chore(name, balancerPeriod, master) {
-      @Override
-      protected void chore() {
-        master.balance();
-      }
-    };
+    Chore chore = new BalancerChore(master);
     return Threads.setDaemonThreadRunning(chore.getThread());
   }
 
   private void stopChores() {
     if (this.balancerChore != null) {
       this.balancerChore.interrupt();
+    }
+    if (this.clusterStatusChore != null) {
+      this.clusterStatusChore.interrupt();
     }
     if (this.catalogJanitorChore != null) {
       this.catalogJanitorChore.interrupt();
@@ -1467,7 +1522,6 @@ Server {
     if (!isMasterRunning()) {
       throw new MasterNotRunningException();
     }
-
     HRegionInfo [] newRegions = getHRegionInfos(hTableDescriptor, splitKeys);
     checkInitialized();
     checkCompression(hTableDescriptor);
@@ -1476,12 +1530,11 @@ Server {
     }
 
     this.executorService.submit(new CreateTableHandler(this,
-      this.fileSystemManager, this.serverManager, hTableDescriptor, conf,
+      this.fileSystemManager, hTableDescriptor, conf,
       newRegions, catalogTracker, assignmentManager));
     if (cpHost != null) {
       cpHost.postCreateTable(hTableDescriptor, newRegions);
     }
-
   }
 
   private void checkCompression(final HTableDescriptor htd)
@@ -2285,11 +2338,330 @@ Server {
    * @see org.apache.hadoop.hbase.master.HMasterCommandLine
    */
   public static void main(String [] args) throws Exception {
-	VersionInfo.logVersion();
+    VersionInfo.logVersion();
     new HMasterCommandLine(HMaster.class).doMain(args);
   }
 
   public HFileCleaner getHFileCleaner() {
     return this.hfileCleaner;
+  }
+  
+  /**
+   * Exposed for TESTING!
+   * @return the underlying snapshot manager
+   */
+  public SnapshotManager getSnapshotManager() {
+    return this.snapshotManager;
+  }
+  
+  @Override
+  public TakeSnapshotResponse snapshot(RpcController controller, TakeSnapshotRequest request)
+      throws ServiceException {
+    LOG.debug("Starting snapshot for:" + request);
+    // get the snapshot information
+    SnapshotDescription snapshot = SnapshotDescriptionUtils.validate(request.getSnapshot(),
+      this.conf);
+    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshot, this
+        .getMasterFileSystem().getRootDir());
+    Path workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(snapshot, this
+        .getMasterFileSystem().getRootDir());
+
+    // try to setup the fs for the snapshot
+    try {
+      // check to see if the snapshot already exists
+      FileSystem fs = this.getMasterFileSystem().getFileSystem();
+      if (fs.exists(snapshotDir)) {
+        throw new SnapshotExistsException("Snapshot " + snapshot.getName() + " already exists.");
+      }
+
+      // then check to see if its already in progress
+      if (fs.exists(workingDir)) {
+        LOG.warn("Snapshot " + snapshot.getName() + " working directory " + workingDir
+            + "still exists, checking progress.");
+
+        // check to see if the current snapshot is running
+        if (!this.getCurrentSnapshotDone()) {
+          throw new SnapshotExistsException("Snapshot " + snapshot.getName()
+              + " working directory " + workingDir + "still exists and is running. ");
+        } else {
+          SnapshotCleaner.ensureCleanerRuns();
+          if (fs.exists(workingDir)) throw new SnapshotExistsException(
+              "Couldn't delete working directory:" + workingDir
+                  + " to start snapshot with same name.");
+        }
+      }
+
+      if (!this.getMasterFileSystem().getFileSystem().mkdirs(workingDir)) {
+        throw new ServiceException(new SnapshotCreationException(
+            "Could not create snapshot directory: " + workingDir));
+      }
+    } catch (IOException e) {
+      LOG.error("Couldn't initialize snapshot:" + snapshot, e);
+      throw new ServiceException(e);
+    }
+    LOG.debug("Prepared fs for snapshot, kicking off...");
+    // create the snapshot handler and launch it
+    TableSnapshotHandler handler;
+    try {
+      // if the table is online, then have the RS handle the snapshots
+      if (this.assignmentManager.getZKTable().isEnabledTable(snapshot.getTable())) {
+        LOG.debug("Table enabled, starting distributed snapshot.");
+        this.getMasterFileSystem().getFileSystem().delete(workingDir, true);
+        throw new ServiceException(new UnsupportedOperationException(
+            "Online table snapshots are not yet supported"));
+      }
+      // For disabled table, snapshot is created by the master
+      else if (this.assignmentManager.getZKTable().isDisabledTable(snapshot.getTable())) {
+        LOG.debug("Table is disabled, running snapshot entirely on master.");
+        handler = snapshotManager.newDisabledTableSnapshotHandler(snapshot, this);
+      } else {
+        throw new TablePartiallyOpenException(snapshot.getTable() + " isn't fully open.");
+      }
+    } catch (IOException e) {
+      try {
+        this.getMasterFileSystem().getFileSystem().delete(workingDir, true);
+      } catch (IOException de) {
+        LOG.error("Unabled to remove the snapshot workingDir=" + workingDir, de);
+      }
+      LOG.error("Couldn't create snapshot handler for snapshot:" + snapshot, e);
+      throw new ServiceException(e);
+    }
+    this.executorService.submit(handler);
+    LOG.debug("Started snapshot: " + snapshot);
+    // set the amount of time the client should wait
+    long waitTime = SnapshotDescriptionUtils.getMaxMasterTimeout(conf, snapshot.getType(),
+      SnapshotDescriptionUtils.DEFAULT_MAX_WAIT_TIME);
+    return TakeSnapshotResponse.newBuilder().setExpectedTime(waitTime).build();
+  }
+
+  /**
+   * List the currently available/stored snapshots. Any in-progress snapshots are ignored
+   */
+  @Override
+  public ListSnapshotResponse listSnapshots(RpcController controller, ListSnapshotRequest request)
+      throws ServiceException {
+    try {
+      ListSnapshotResponse.Builder builder = ListSnapshotResponse.newBuilder();
+
+      // first create the snapshot description and check to see if it exists
+      Path snapshotDir = SnapshotDescriptionUtils.getSnapshotDir(this.getMasterFileSystem()
+          .getRootDir());
+      // check to see if the snapshot already exists
+      if (!this.getMasterFileSystem().getFileSystem().exists(snapshotDir)) {
+        return builder.build();
+      }
+
+      FileSystem fs = this.getMasterFileSystem().getFileSystem();
+      FileStatus[] snapshots = fs.listStatus(snapshotDir, new FSUtils.DirFilter(fs));
+      for (FileStatus snapshot : snapshots) {
+        Path info = new Path(snapshot.getPath(), SnapshotDescriptionUtils.SNAPSHOTINFO_FILE);
+        // skip all the unfinished snapshots
+        if (!fs.exists(info)) continue;
+        FSDataInputStream in = null;
+        try {
+          in = fs.open(info);
+          SnapshotDescription desc = SnapshotDescription.parseFrom(in);
+          builder.addSnapshots(desc);
+        } catch (IOException e) {
+          LOG.warn("Crashed snapshot " + snapshot.getPath().getName());
+        } finally {
+          if (in != null) {
+            in.close();
+          }
+        }
+      }
+      return builder.build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public RenameSnapshotResponse renameSnapshot(RpcController controller,
+      RenameSnapshotRequest request) throws ServiceException {
+    Path rootDir = this.getMasterFileSystem().getRootDir();
+    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(request.getName(), rootDir);
+    Path newTmpDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(request.getNewName(), rootDir);
+    Path newDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(request.getNewName(), rootDir);
+
+    FileSystem fs = getMasterFileSystem().getFileSystem();
+
+    try {
+      // A snapshot with the same name seems in progress
+      if (fs.exists(newTmpDir)) {
+        LOG.warn("Snapshot " + request.getNewName() + " working directory " + newTmpDir
+            + "still exists, checking progress.");
+        throw new SnapshotExistsException("Snapshot " + request.getName()
+              + " working directory " + newTmpDir);
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+
+    try {
+      // Create a new snapshot with the same data
+      if (!FileUtil.copy(fs, snapshotDir, fs, newTmpDir, false, conf)) {
+        throw new RenameSnapshotException("Unable to copy the snapshot metadata");
+      }
+
+      // Switch name and write the new info
+      SnapshotDescription snapshot = SnapshotDescriptionUtils.readSnapshotInfo(fs, newTmpDir);
+      snapshot = snapshot.toBuilder().setName(request.getNewName()).build();
+      SnapshotDescriptionUtils.writeSnapshotInfo(snapshot, newTmpDir, fs);
+
+      // Move back the snapshot
+      if (!fs.rename(newTmpDir, newDir)) {
+        LOG.warn("Unable to move snapshot from the working directory " + newTmpDir +
+          " to the completed directory " + newDir);
+        throw new RenameSnapshotException("Unable to move snapshot from the working directory " +
+          newTmpDir + " to the completed directory " + newDir);
+      }
+
+      fs.delete(snapshotDir, true);
+      return RenameSnapshotResponse.newBuilder().build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public DeleteSnapshotResponse deleteSnapshot(RpcController controller,
+      DeleteSnapshotRequest request) throws ServiceException {
+    try {
+      String snapshotName = request.getSnapshot().getName();
+      LOG.debug("Deleting snapshot: " + snapshotName);
+      // first create the snapshot description and check to see if it exists
+      Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, this
+          .getMasterFileSystem().getRootDir());
+
+      // check to see if the snapshot already exists
+      if (!this.getMasterFileSystem().getFileSystem().exists(snapshotDir)) {
+        LOG.debug("Attempted to delete snapshot:" + snapshotName + ", but doesn't exist.");
+        throw new SnapshotDoesNotExistsException(request.getSnapshot());
+      }
+
+      // delete the existing snapshot
+      this.getMasterFileSystem().getFileSystem().delete(snapshotDir, true);
+      return DeleteSnapshotResponse.newBuilder().build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  /**
+   * Check to see if the currently running snapshot is complete
+   * @return <tt>true</tt> if have a snapshot running, </tt>false</tt> otherwise
+   */
+  private boolean getCurrentSnapshotDone() {
+    TableSnapshotHandler sentinel = this.snapshotManager.getCurrentSnapshotMonitor();
+    return sentinel == null || sentinel.getFinished();
+  }
+
+  @Override
+  public IsSnapshotDoneResponse isSnapshotDone(RpcController controller,
+      IsSnapshotDoneRequest request) throws ServiceException {
+    LOG.debug("Checking to see if snapshot from request:" + request + " is done");
+    try {
+      TableSnapshotHandler sentinel = this.snapshotManager.getCurrentSnapshotMonitor();
+      if (sentinel == null) {
+        throw new UnknownSnapshotException("No previous snapshot to compare to snapshot:"
+            + request.getSnapshot());
+      }
+
+      // check the request to see if they have snapshot
+      if (!request.hasSnapshot()) {
+        throw new UnknownSnapshotException(
+            "No snapshot name passed in request, can't figure out which snapshot you want to check.");
+      }
+
+      // get the current snapshot
+      SnapshotDescription snapshot = sentinel.getSnapshot();
+      LOG.debug("Have a snapshot to compare:" + snapshot);
+      SnapshotDescription expected = request.getSnapshot();
+
+      // check the passed snapshot against the known
+      IsSnapshotDoneResponse.Builder builder = IsSnapshotDoneResponse.newBuilder();
+      if (!expected.getName().equals(snapshot.getName())) {
+        throw new UnknownSnapshotException("Don't know about snapshot:" + expected + ", only know:"
+            + snapshot);
+      }
+
+      // pass on any expected failure we find in the sentinel
+      sentinel.failOnError();
+
+      // check to see if we are done (throws exception if the snapshot failed)
+      if (sentinel.getFinished()) {
+        builder.setDone(true);
+        LOG.debug("Snapshot " + snapshot + " has completed, notifying client.");
+      } else if (LOG.isDebugEnabled()) {
+        LOG.debug("Sentinel isn't finished with snapshot!");
+      }
+      return builder.build();
+    } catch (HBaseSnapshotException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public RestoreSnapshotResponse restoreSnapshot(RpcController controller,
+      RestoreSnapshotRequest request) throws ServiceException {
+    SnapshotDescription reqSnapshot = request.getSnapshot();
+    Path rootDir = this.getMasterFileSystem().getRootDir();
+    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(request.getSnapshot(), rootDir);
+
+    try {
+      FileSystem fs = this.getMasterFileSystem().getFileSystem();
+      SnapshotDescription snapshot = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
+      HTableDescriptor snapshotTableDesc = FSTableDescriptors.getTableDescriptor(fs, snapshotDir);
+      String tableName = reqSnapshot.hasTable() ? reqSnapshot.getTable() : snapshot.getTable();
+
+      // Check if the same restore is already running
+      if (snapshotManager.isRestoreInProcess(reqSnapshot)) {
+        String msg = "Restore snapshot=" + snapshot.getName() +
+          " as table=" + tableName + " already in progress";
+        LOG.error(msg);
+        throw new RestoreSnapshotException(msg);
+      }
+
+      long waitTime = RestoreSnapshotHelper.getMaxMasterTimeout(conf,
+        RestoreSnapshotHelper.DEFAULT_MAX_WAIT_TIME);
+
+      // Prepare the restore/clone operation
+      EventHandler handler;
+      if (MetaReader.tableExists(catalogTracker, tableName)) {
+        if (this.assignmentManager.getZKTable().isEnabledTable(snapshot.getTable())) {
+          throw new ServiceException(new UnsupportedOperationException(
+            "Table must be disabled to do the restore"));
+        }
+
+        handler = snapshotManager.newRestoreSnapshotHandler(snapshot, snapshotTableDesc, waitTime);
+      } else {
+        HTableDescriptor htd = RestoreSnapshotHelper.cloneTableSchema(snapshotTableDesc,
+                                                           Bytes.toBytes(tableName));
+        handler = snapshotManager.newCloneSnapshotHandler(snapshot, htd, waitTime);
+      }
+
+      // Submit the restore/clone operation!
+      LOG.info("Restore snapshot=" + snapshot.getName() + " as table=" + tableName);
+      this.executorService.submit(handler);
+
+      return RestoreSnapshotResponse.newBuilder().setExpectedTime(waitTime).build();
+    } catch (HBaseSnapshotException e) {
+      throw new ServiceException(e);
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+  }
+
+  @Override
+  public IsRestoreSnapshotDoneResponse isRestoreSnapshotDone(RpcController controller,
+      IsRestoreSnapshotDoneRequest request) throws ServiceException {
+    SnapshotDescription snapshot = request.getSnapshot();
+    boolean done = !this.snapshotManager.isRestoreInProcess(snapshot);
+    if (done) {
+      SnapshotManager.OperationStatus status = this.snapshotManager.restoreRemove(snapshot);
+      if (status != null && status.isFailed()) throw new ServiceException(status.getError());
+    }
+    return IsRestoreSnapshotDoneResponse.newBuilder().setDone(done).build();
   }
 }

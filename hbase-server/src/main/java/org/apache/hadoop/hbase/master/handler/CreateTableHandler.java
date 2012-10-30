@@ -27,11 +27,11 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.catalog.CatalogTracker;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
@@ -41,9 +41,7 @@ import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
-import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.zookeeper.KeeperException;
 
@@ -53,24 +51,20 @@ import org.apache.zookeeper.KeeperException;
 @InterfaceAudience.Private
 public class CreateTableHandler extends EventHandler {
   private static final Log LOG = LogFactory.getLog(CreateTableHandler.class);
-  private MasterFileSystem fileSystemManager;
-  private final HTableDescriptor hTableDescriptor;
-  private Configuration conf;
-  private final AssignmentManager assignmentManager;
-  private final CatalogTracker catalogTracker;
-  private final ServerManager serverManager;
-  private final HRegionInfo [] newRegions;
+  protected final MasterFileSystem fileSystemManager;
+  protected final HTableDescriptor hTableDescriptor;
+  protected final Configuration conf;
+  protected final AssignmentManager assignmentManager;
+  protected final CatalogTracker catalogTracker;
+  protected final HRegionInfo [] newRegions;
 
   public CreateTableHandler(Server server, MasterFileSystem fileSystemManager,
-    ServerManager serverManager, HTableDescriptor hTableDescriptor,
-    Configuration conf, HRegionInfo [] newRegions,
-    CatalogTracker catalogTracker, AssignmentManager assignmentManager)
-    throws NotAllMetaRegionsOnlineException, TableExistsException,
-    IOException {
+      HTableDescriptor hTableDescriptor, Configuration conf, HRegionInfo [] newRegions,
+      CatalogTracker catalogTracker, AssignmentManager assignmentManager)
+          throws NotAllMetaRegionsOnlineException, TableExistsException, IOException {
     super(server, EventType.C_M_CREATE_TABLE);
 
     this.fileSystemManager = fileSystemManager;
-    this.serverManager = serverManager;
     this.hTableDescriptor = hTableDescriptor;
     this.conf = conf;
     this.newRegions = newRegions;
@@ -141,21 +135,28 @@ public class CreateTableHandler extends EventHandler {
   }
 
   private void handleCreateTable() throws IOException, KeeperException {
-
     // TODO: Currently we make the table descriptor and as side-effect the
     // tableDir is created.  Should we change below method to be createTable
     // where we create table in tmp dir with its table descriptor file and then
     // do rename to move it into place?
     FSTableDescriptors.createTableDescriptor(this.hTableDescriptor, this.conf);
 
+    // Create regions
+    List<HRegionInfo> regionInfos = handleCreateRegions();
+
+    // Assign and Enable the table
+    handleEnableTable(regionInfos);
+  }
+
+  protected List<HRegionInfo> handleCreateRegions() throws IOException, KeeperException {
     List<HRegionInfo> regionInfos = new ArrayList<HRegionInfo>();
     final int batchSize =
       this.conf.getInt("hbase.master.createtable.batchsize", 100);
+    Path rootDir = this.fileSystemManager.getRootDir();
     for (int regionIdx = 0; regionIdx < this.newRegions.length; regionIdx++) {
       HRegionInfo newRegion = this.newRegions[regionIdx];
       // 1. Create HRegion
-      HRegion region = HRegion.createHRegion(newRegion,
-        this.fileSystemManager.getRootDir(), this.conf,
+      HRegion region = HRegion.createHRegion(newRegion, rootDir, this.conf,
         this.hTableDescriptor, null, false, true);
 
       regionInfos.add(region.getRegionInfo());
@@ -171,19 +172,21 @@ public class CreateTableHandler extends EventHandler {
     if (regionInfos.size() > 0) {
       MetaEditor.addRegionsToMeta(this.catalogTracker, regionInfos);
     }
+    return Arrays.asList(newRegions);
+  }
 
-    // 4. Trigger immediate assignment of the regions in round-robin fashion
-    List<ServerName> servers = serverManager.createDestinationServersList();
+  protected void handleEnableTable(final List<HRegionInfo> regions)
+      throws IOException, KeeperException {
+    // 1. Trigger immediate assignment of the regions in round-robin fashion
     try {
-      List<HRegionInfo> regions = Arrays.asList(newRegions);
       assignmentManager.getRegionStates().createRegionStates(regions);
-      assignmentManager.assignUserRegions(regions, servers);
+      assignmentManager.assign(regions);
     } catch (InterruptedException ie) {
       LOG.error("Caught " + ie + " during round-robin assignment");
       throw new IOException(ie);
     }
 
-    // 5. Set table enabled flag up in zk.
+    // 2. Set table enabled flag up in zk.
     try {
       assignmentManager.getZKTable().
         setEnabledTable(this.hTableDescriptor.getNameAsString());

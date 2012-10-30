@@ -22,8 +22,10 @@ import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
 import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
+import org.apache.hadoop.metrics2.lib.MetricMutableQuantiles;
 import org.apache.hadoop.metrics2.lib.MutableCounterLong;
 import org.apache.hadoop.metrics2.lib.MutableGaugeLong;
+import org.apache.hadoop.metrics2.lib.MutableHistogram;
 import org.apache.hadoop.metrics2.source.JvmMetrics;
 
 /**
@@ -31,7 +33,20 @@ import org.apache.hadoop.metrics2.source.JvmMetrics;
  */
 public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
 
-  private static boolean defaultMetricsSystemInited = false;
+  private static enum DefaultMetricsSystemInitializer {
+    INSTANCE;
+    private boolean inited = false;
+    private JvmMetrics jvmMetricsSource;
+
+    synchronized void init(String name) {
+      if (inited) return;
+      inited = true;
+      DefaultMetricsSystem.initialize(HBASE_METRICS_SYSTEM_NAME);
+      jvmMetricsSource = JvmMetrics.create(name, "", DefaultMetricsSystem.instance());
+
+    }
+  }
+
   public static final String HBASE_METRICS_SYSTEM_NAME = "hbase";
 
   protected final DynamicMetricsRegistry metricsRegistry;
@@ -39,8 +54,6 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
   protected final String metricsDescription;
   protected final String metricsContext;
   protected final String metricsJmxContext;
-
-  private JvmMetrics jvmMetricsSource;
 
   public BaseMetricsSourceImpl(
       String metricsName,
@@ -54,16 +67,16 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
     this.metricsJmxContext = metricsJmxContext;
 
     metricsRegistry = new DynamicMetricsRegistry(metricsName).setContext(metricsContext);
+    DefaultMetricsSystemInitializer.INSTANCE.init(metricsName);
 
-    if (!defaultMetricsSystemInited) {
-      //Not too worried about mutlithread here as all it does is spam the logs.
-      defaultMetricsSystemInited = true;
-      DefaultMetricsSystem.initialize(HBASE_METRICS_SYSTEM_NAME);
-      jvmMetricsSource = JvmMetrics.create(metricsName, "", DefaultMetricsSystem.instance());
-    }
-
+    //Register this instance.
     DefaultMetricsSystem.instance().register(metricsJmxContext, metricsDescription, this);
+    init();
 
+  }
+
+  public void init() {
+    this.metricsRegistry.clearMetrics();
   }
 
   /**
@@ -111,6 +124,18 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
 
   }
 
+  @Override
+  public void updateHistogram(String name, long value) {
+    MutableHistogram histo = metricsRegistry.getHistogram(name);
+    histo.add(value);
+  }
+
+  @Override
+  public void updateQuantile(String name, long value) {
+    MetricMutableQuantiles histo = metricsRegistry.getQuantile(name);
+    histo.add(value);
+  }
+
   /**
    * Remove a named gauge.
    *
@@ -129,8 +154,14 @@ public class BaseMetricsSourceImpl implements BaseMetricsSource, MetricsSource {
     metricsRegistry.removeMetric(key);
   }
 
+  protected DynamicMetricsRegistry getMetricsRegistry() {
+    return metricsRegistry;
+  }
+
   @Override
   public void getMetrics(MetricsCollector metricsCollector, boolean all) {
     metricsRegistry.snapshot(metricsCollector.addRecord(metricsRegistry.info()), all);
   }
+
+
 }

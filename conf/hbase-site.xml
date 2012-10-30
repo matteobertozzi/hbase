@@ -21,4 +21,12 @@
  */
 -->
 <configuration>
+  <property>
+    <name>hbase.master.hfilecleaner.plugins</name>
+    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner,org.apache.hadoop.hbase.master.snapshot.SnapshotHFileCleaner</value>
+  </property>
+  <property>
+    <name>hbase.master.logcleaner.plugins</name>
+    <value>org.apache.hadoop.hbase.master.cleaner.TimeToLiveLogCleaner,org.apache.hadoop.hbase.master.snapshot.SnapshotLogCleaner</value>
+  </property>
 </configuration>
