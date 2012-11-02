@@ -933,18 +933,39 @@ public abstract class FSUtils {
       this.fs = fs;
     }
 
+    @Override
     public boolean accept(Path p) {
+      return checkIsDirectory(fs, p);
+    }
+
+    public static boolean checkIsDirectory(FileSystem fs, Path p) {
       boolean isValid = false;
       try {
         if (HConstants.HBASE_NON_USER_TABLE_DIRS.contains(p.toString())) {
           isValid = false;
         } else {
-            isValid = this.fs.getFileStatus(p).isDir();
+          isValid = fs.getFileStatus(p).isDir();
         }
       } catch (IOException e) {
         e.printStackTrace();
       }
       return isValid;
+    }
+  }
+
+  /**
+   * Filter out paths that are hidden (start with '.') and are not directories.
+   */
+  public static class VisibleDirectory implements PathFilter {
+    private final FileSystem fs;
+
+    public VisibleDirectory(FileSystem fs) {
+      this.fs = fs;
+    }
+
+    @Override
+    public boolean accept(Path file) {
+      return DirFilter.checkIsDirectory(fs, file) && !file.getName().toString().startsWith(".");
     }
   }
 
@@ -1112,6 +1133,25 @@ public abstract class FSUtils {
   }
 
   /**
+   * Given a particular region dir, return all the familydirs inside it
+   *
+   * @param fs A file system for the Path
+   * @param regionDir Path to a specific region directory
+   * @return List of paths to valid family directories in region dir.
+   * @throws IOException
+   */
+  public static List<Path> getFamilyDirs(final FileSystem fs, final Path regionDir) throws IOException {
+    // assumes we are in a region dir.
+    FileStatus[] fds = fs.listStatus(regionDir, new FamilyDirFilter(fs));
+    List<Path> familyDirs = new ArrayList<Path>(fds.length);
+    for (FileStatus fdfs: fds) {
+      Path fdPath = fdfs.getPath();
+      familyDirs.add(fdPath);
+    }
+    return familyDirs;
+  }
+
+  /**
    * Filter for HFiles that excludes reference files.
    */
   public static class HFileFilter implements PathFilter {
@@ -1209,7 +1249,7 @@ public abstract class FSUtils {
   
   /**
    * Calls fs.listStatus() and treats FileNotFoundException as non-fatal
-   * This would accommodate difference in various hadoop versions
+   * This accommodates differences between hadoop versions
    * 
    * @param fs file system
    * @param dir directory
@@ -1228,7 +1268,19 @@ public abstract class FSUtils {
     if (status == null || status.length < 1) return null;
     return status;
   }
-  
+
+  /**
+   * Calls fs.listStatus() and treats FileNotFoundException as non-fatal
+   * This would accommodates differences between hadoop versions
+   *
+   * @param fs file system
+   * @param dir directory
+   * @return null if tabledir doesn't exist, otherwise FileStatus array
+   */
+  public static FileStatus[] listStatus(final FileSystem fs, final Path dir) throws IOException {
+    return listStatus(fs, dir, null);
+  }
+
   /**
    * Calls fs.delete() and returns the value returned by the fs.delete()
    * 
@@ -1253,19 +1305,6 @@ public abstract class FSUtils {
    */
   public static boolean isExists(final FileSystem fs, final Path path) throws IOException {
     return fs.exists(path);
-  }
-
-  /**
-   * Log the current state of the filesystem from a certain root directory
-   * @param fs filesystem to investigate
-   * @param root root file/directory to start logging from
-   * @param LOG log to output information
-   * @throws IOException if an unexpected exception occurs
-   */
-  public static void logFileSystemState(final FileSystem fs, final Path root, Log LOG)
-      throws IOException {
-    LOG.debug("Current file system:");
-    logFSTree(LOG, fs, root, "|-");
   }
 
   /**
@@ -1305,6 +1344,19 @@ public abstract class FSUtils {
   }
 
   /**
+   * Log the current state of the filesystem from a certain root directory
+   * @param fs filesystem to investigate
+   * @param root root file/directory to start logging from
+   * @param LOG log to output information
+   * @throws IOException if an unexpected exception occurs
+   */
+  public static void logFileSystemState(final FileSystem fs, final Path root, Log LOG)
+      throws IOException {
+    LOG.debug("Current file system:");
+    logFSTree(LOG, fs, root, "|-");
+  }
+
+  /**
    * Recursive helper to log the state of the FS
    * 
    * @see #logFileSystemState(FileSystem, Path, Log)
@@ -1322,5 +1374,21 @@ public abstract class FSUtils {
         LOG.debug(prefix + file.getPath().getName());
       }
     }
+  }
+
+  /**
+   * Create a zero-length file on the {@link FileSystem}.
+   * @param fs Filesystem on which to create the file
+   * @param file full path of the file to create. If {@link Path#getParent()} returns <tt>null</tt>
+   *          the file is just created in the root filesystem directory. If the parent directories
+   *          exist, just creates the file
+   * @return <tt>true</tt> on succcess, <tt>false</tt> if the file cannot be created or already
+   *         exists
+   * @throws IOException if the filesystem throws an exception
+   */
+  public static boolean touch(FileSystem fs, Path file) throws IOException {
+    // create all the parents
+    if (file.getParent() != null) fs.mkdirs(file.getParent());
+    return fs.createNewFile(file);
   }
 }

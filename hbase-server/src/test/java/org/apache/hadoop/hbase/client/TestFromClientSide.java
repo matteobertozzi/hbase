@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.junit.After;
@@ -3969,7 +3970,7 @@ public class TestFromClientSide {
     ExecutorService pool = new ThreadPoolExecutor(1, Integer.MAX_VALUE,
       60, TimeUnit.SECONDS,
       new SynchronousQueue<Runnable>(),
-      new DaemonThreadFactory("test-from-client-pool"));
+      Threads.newDaemonThreadFactory("test-from-client"));
     ((ThreadPoolExecutor)pool).allowCoreThreadTimeOut(true);
     return new HTable(tableName, conn, pool);
   }
@@ -4898,8 +4899,31 @@ public class TestFromClientSide {
     assertEquals(1, regionsList.size());
   }
 
-   @org.junit.Rule
-   public org.apache.hadoop.hbase.ResourceCheckerJUnitRule cu =
-    new org.apache.hadoop.hbase.ResourceCheckerJUnitRule();
+  @Test
+  public void testJira6912() throws Exception {
+    byte [] TABLE = Bytes.toBytes("testJira6912");
+    HTable foo = TEST_UTIL.createTable(TABLE, new byte[][] {FAMILY}, 10);
+
+    List<Put> puts = new ArrayList<Put>();
+    for (int i=0;i !=100; i++){
+      Put put = new Put(Bytes.toBytes(i));
+      put.add(FAMILY, FAMILY, Bytes.toBytes(i));
+      puts.add(put);
+    }
+    foo.put(puts);
+    // If i comment this out it works
+    TEST_UTIL.flush();
+
+    Scan scan = new Scan();
+    scan.setStartRow(Bytes.toBytes(1));
+    scan.setStopRow(Bytes.toBytes(3));
+    scan.addColumn(FAMILY, FAMILY);
+    scan.setFilter(new RowFilter(CompareFilter.CompareOp.NOT_EQUAL, new BinaryComparator(Bytes.toBytes(1))));
+
+    ResultScanner scanner = foo.getScanner(scan);
+    Result[] bar = scanner.next(100);
+    assertEquals(1, bar.length);
+  }
+
 }
 
