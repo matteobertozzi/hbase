@@ -48,13 +48,14 @@ public class TestHFileInlineToRootChunkConversion {
   public void testWriteHFile() throws Exception {
     Path hfPath = new Path(testUtil.getDataTestDir(),
         TestHFileInlineToRootChunkConversion.class.getSimpleName() + ".hfile");
-    int maxChunkSize = 1024;
+    final int maxChunkSize = 1024;
+    final int blockSize = 16;
     FileSystem fs = FileSystem.get(conf);
     CacheConfig cacheConf = new CacheConfig(conf);
     conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, maxChunkSize); 
     HFileWriterV2 hfw =
         (HFileWriterV2) new HFileWriterV2.WriterFactoryV2(conf, cacheConf)
-            .withBlockSize(16)
+            .withBlockSize(blockSize)
             .withPath(fs, hfPath).create();
     List<byte[]> keys = new ArrayList<byte[]>();
     StringBuilder sb = new StringBuilder();
@@ -79,7 +80,7 @@ public class TestHFileInlineToRootChunkConversion {
     HFileReaderV2 reader = (HFileReaderV2) HFile.createReader(fs, hfPath, cacheConf);
     HFileScanner scanner = reader.getScanner(true, true);
     for (int i = 0; i < keys.size(); ++i) {
-      scanner.seekTo(keys.get(i));
+    	scanner.seekTo(keys.get(i));
     }
     reader.close();
   }

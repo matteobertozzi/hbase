@@ -207,7 +207,7 @@ public class HFileArchiver {
    * @param conf {@link Configuration} to examine to determine the archive directory
    * @param tableDir {@link Path} to where the table is being stored (for building the archive path)
    * @param family the family hosting the store files
-   * @param storeFile file to be archived
+   * @param storeFile file to be archived	
    * @throws IOException if the files could not be correctly disposed.
    */
   public static void archiveStoreFile(FileSystem fs, HRegionInfo regionInfo,
@@ -226,7 +226,7 @@ public class HFileArchiver {
    * Archive the given files and resolve any conflicts with existing files via appending the time
    * archiving started (so all conflicts in the same group have the same timestamp appended).
    * <p>
-   * If any of the passed files to archive are directories, archives the all files under that
+   * If any of the passed files to archive are directories, archives all the files under that
    * directory. Archive directory structure for children is the base archive directory name + the
    * parent directory and is built recursively is passed files are directories themselves.
    * @param fs {@link FileSystem} on which to archive the files

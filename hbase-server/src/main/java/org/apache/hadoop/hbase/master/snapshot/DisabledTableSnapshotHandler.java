@@ -105,7 +105,7 @@ public class DisabledTableSnapshotHandler extends TableSnapshotHandler {
       monitor.failOnError();
 
       // 2.2 copy the regionInfo files to the snapshot
-      Path snapshotRegionDir = TakeSnapshotUtils.getRegionSnaphshotDirectory(snapshot, rootDir,
+      Path snapshotRegionDir = TakeSnapshotUtils.getRegionSnapshotDirectory(snapshot, rootDir,
         regionInfo.getEncodedName());
       HRegion.writeRegioninfoOnFilesystem(regionInfo, snapshotRegionDir, fs, conf);
       // check for error for each region

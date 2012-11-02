@@ -47,6 +47,7 @@ import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.junit.After;
 import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Ignore;
@@ -153,7 +154,7 @@ public class TestRestoreSnapshotFromClient {
 
   @Test
   public void testCloneSnapshot() throws Exception {
-    byte[] tableName = Bytes.toBytes("test-clone");
+    byte[] tableName = Bytes.toBytes("test-clone" + System.currentTimeMillis());
     HBaseAdmin admin = UTIL.getHBaseAdmin();
     try {
       admin.cloneSnapshot(SNAPSHOT_NAME, tableName);
@@ -171,8 +172,13 @@ public class TestRestoreSnapshotFromClient {
     int nrows = UTIL.countRows(new HTable(UTIL.getConfiguration(), TABLE_NAME));
     assertEquals("Number of rows pre-snapshot", 17576, nrows);
 
-    // make sure we don't fail on listing snapshots
-    assertEquals("Have some previous snapshots", 0, admin.listSnapshots().size());
+    // make sure this snapshot does not already exist
+    
+    for(SnapshotDescription desc : admin.listSnapshots()) {
+    	
+    	if(desc.getName().equals(Bytes.toString(SNAPSHOT_NAME)))
+    		Assert.fail("This snapshot, " + SNAPSHOT_NAME + ", already exists");
+    }
 
     // disable the table
     admin.disableTable(TABLE_NAME);
@@ -182,17 +188,35 @@ public class TestRestoreSnapshotFromClient {
         FSUtils.getRootDir(UTIL.getConfiguration()), LOG);
 
       // take a snapshot of the disabled table
+      final int originalNumSnapshots = admin.listSnapshots().size();
+            
       admin.snapshot(SNAPSHOT_NAME, TABLE_NAME);
       LOG.debug("Snapshot completed.");
 
       // make sure we have the snapshot
-      List<SnapshotDescription> snapshots = admin.listSnapshots();
-      assertEquals("Snapshot wasn't taken.", 1, snapshots.size());
+      List<SnapshotDescription> snapshotList = admin.listSnapshots();
+      assertEquals("Snapshot wasn't taken.", originalNumSnapshots + 1, snapshotList.size());
+   
+			// get index of snapshot
+			int i = 0;
+			boolean found = false;
+			for (SnapshotDescription sd : snapshotList) {
 
+				if (sd.getName().equals(Bytes.toString(SNAPSHOT_NAME))) {
+					found = true;
+					break;
+				} else {
+					i++;
+				}
+			}
+      
+      if(!found) {
+    	  Assert.fail("Snapshot " + Bytes.toString(SNAPSHOT_NAME) + " was not in the list of current snapshots. ");
+      }
       // make sure its a valid snapshot
       FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
       Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
-      SnapshotTestingUtils.confirmSnapshotValid(snapshots.get(0), TABLE_NAME, TEST_FAM, rootDir,
+      SnapshotTestingUtils.confirmSnapshotValid(snapshotList.get(i), TABLE_NAME, TEST_FAM, rootDir,
       admin, fs, false, new Path(rootDir, HConstants.HREGION_LOGDIR_NAME));
     } finally {
       admin.enableTable(TABLE_NAME);
@@ -200,10 +224,12 @@ public class TestRestoreSnapshotFromClient {
   }
 
   private void removeSnapshot() throws Exception {
-    HBaseAdmin admin = UTIL.getHBaseAdmin();
-    admin.deleteSnapshot(SNAPSHOT_NAME);
+	
+	HBaseAdmin admin = UTIL.getHBaseAdmin();
+	final int originalSnapshotCount = admin.listSnapshots().size();
+	admin.deleteSnapshot(SNAPSHOT_NAME);
     List<SnapshotDescription> snapshots = admin.listSnapshots();
-    assertEquals("Snapshot wasn't deleted.", 0, snapshots.size());
+    assertEquals("Snapshot wasn't deleted.", 1, originalSnapshotCount - snapshots.size());
   }
 
   public int loadMoreData(final HTable t, final byte[] f) throws IOException {
