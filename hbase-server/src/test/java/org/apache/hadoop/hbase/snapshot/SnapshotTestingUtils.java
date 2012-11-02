@@ -21,6 +21,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
+
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
@@ -37,6 +38,7 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.client.HBaseAdmin;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
@@ -92,6 +94,26 @@ public class SnapshotTestingUtils {
 
     return snapshots;
   }
+  
+  /**
+   * Make sure that there is only one snapshot returned from the master and its name and table match
+   * the passed in parameters.
+   */
+  public static List<SnapshotDescription> assertExistsMatchingSnapshot(HBaseAdmin admin,
+      String snapshotName, String tableName) throws IOException {
+    // list the snapshot
+    List<SnapshotDescription> snapshots = admin.listSnapshots();
+
+    List<SnapshotDescription> returnedSnapshots = new ArrayList<SnapshotDescription>();
+    
+    for(SnapshotDescription sd : snapshots) {
+    	if(snapshotName.equals(sd.getName()) && tableName.equals(sd.getTable())) {
+    		returnedSnapshots.add(sd);
+    	}
+    }
+    
+    return returnedSnapshots;
+  }  
 
   /**
    * Make sure that there is only one snapshot returned from the master and its name and table match
@@ -109,7 +131,7 @@ public class SnapshotTestingUtils {
 	public static void confirmSnapshotValid(
 			SnapshotDescription snapshotDescriptor, byte[] tableName,
 			List<byte[]> testFamilies, Path rootDir, HBaseAdmin admin,
-			FileSystem fs, boolean requireLogs, Path logsDir)
+			FileSystem fs, boolean requireLogs, Path logsDir, Set<String> emptyFamilies, Set<String> snapshotServers)
 			throws IOException {
 
 		if (testFamilies == null)
@@ -117,8 +139,16 @@ public class SnapshotTestingUtils {
 
 		for (byte[] testFamily : testFamilies) {
 
-			confirmSnapshotValid(snapshotDescriptor, tableName, testFamily,
-					rootDir, admin, fs, requireLogs, logsDir, null);
+
+			if(emptyFamilies.contains(Bytes.toString(testFamily))) {
+			
+				confirmSnapshotValid(snapshotDescriptor, tableName, testFamily,
+					rootDir, admin, fs, requireLogs, logsDir, true, null);
+			} else {
+				
+				confirmSnapshotValid(snapshotDescriptor, tableName, testFamily,
+						rootDir, admin, fs, requireLogs, logsDir, false, null);
+			}
 		}
 	}
   
@@ -133,15 +163,26 @@ public class SnapshotTestingUtils {
 		Assert.assertTrue(
 				"Snapshot is not valid",
 				isSnapshotValid(snapshotDescriptor, tableName, testFamily,
-						rootDir, admin, fs, requireLogs, logsDir, snapshotServers));
+						rootDir, admin, fs, requireLogs, logsDir, false, snapshotServers));
 	}
 
-    //Broke this out into its own function so that it is easier to test and can be used to detect illegal state without failing the test.
+	public static void confirmSnapshotValid(
+			SnapshotDescription snapshotDescriptor, byte[] tableName,
+			byte[] testFamily, Path rootDir, HBaseAdmin admin, FileSystem fs,
+			boolean requireLogs, Path logsDir, boolean familyEmpty, Set<String> snapshotServers) throws IOException {
+
+		Assert.assertTrue(
+				"Snapshot is not valid",
+				isSnapshotValid(snapshotDescriptor, tableName, testFamily,
+						rootDir, admin, fs, requireLogs, logsDir, familyEmpty, snapshotServers));
+	}
+
+	
 	public static boolean isSnapshotValid(
 			SnapshotDescription snapshotDescriptor, byte[] tableName,
 			byte[] testFamily, Path rootDir, HBaseAdmin admin, FileSystem fs,
-			boolean requireLogs, Path logsDir, Set<String> snapshotServers) throws IOException {
-
+			boolean requireLogs, Path logsDir, boolean familyEmpty, Set<String> snapshotServers) throws IOException {
+	
 		Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(
 				snapshotDescriptor, rootDir);
 
@@ -186,26 +227,47 @@ public class SnapshotTestingUtils {
 				return false;
 			}
 
-			// check to make sure we have the family
-			Path snapshotFamilyDir = new Path(snapshotRegionDir, Bytes.toString(testFamily));
-			if (!fs.exists(snapshotFamilyDir)) {
-				return false;
-			}
+			if (!familyEmpty) {
 
-			// make sure we have some files references
-			FileStatus[] snapshotFamilyFilearchives = fs.listStatus(snapshotFamilyDir);
-			if (!(snapshotFamilyFilearchives.length > 0)) {
-				return false;
-			}
-			
-			//Get all the hfiles for a region on a particular family
-			Path regionDir = new Path(new Path(rootDir, Bytes.toString(tableName)), regionName);
-			Path tableFamilyDir = new Path(regionDir, Bytes.toString(testFamily));
-			if(!allHFilesInTablePresentInSnapshot(Bytes.toString(tableName), fs.listStatus(tableFamilyDir), snapshotFamilyFilearchives)) {
-				return false;
+				// check to make sure we have the family
+				Path snapshotFamilyDir = new Path(snapshotRegionDir,
+						Bytes.toString(testFamily));
+
+				if (!fs.exists(snapshotFamilyDir)) {
+					return false;
+				}
+
+				// make sure we have some files references
+				FileStatus[] snapshotFamilyFilearchives = fs
+						.listStatus(snapshotFamilyDir);
+				if (!(snapshotFamilyFilearchives.length > 0)) {
+					return false;
+				}
+
+				// Get all the hfiles for a region on a particular family
+				Path regionDir = new Path(new Path(rootDir,
+						Bytes.toString(tableName)), regionName);
+				Path tableFamilyDir = new Path(regionDir,
+						Bytes.toString(testFamily));
+				if (!allHFilesInTablePresentInSnapshot(
+						Bytes.toString(tableName),
+						fs.listStatus(tableFamilyDir),
+						snapshotFamilyFilearchives)) {
+					return false;
+				}
 			}
 		}
 		return true;
+
+	}
+	
+    //Broke this out into its own function so that it is easier to test and can be used to detect illegal state without failing the test.
+	public static boolean isSnapshotValid(
+			SnapshotDescription snapshotDescriptor, byte[] tableName,
+			byte[] testFamily, Path rootDir, HBaseAdmin admin, FileSystem fs,
+			boolean requireLogs, Path logsDir) throws IOException {
+
+		return isSnapshotValid(snapshotDescriptor, tableName, testFamily, rootDir, admin, fs, requireLogs, logsDir, false, null);
 	}
 
   /**
@@ -348,4 +410,40 @@ public class SnapshotTestingUtils {
 	  
 	  return true;
   }
+  
+	public static void createSnapshotAndValidate(HBaseAdmin admin,
+			String tableNameString, String familyName, String snapshotNameString, Path rootDir,
+			FileSystem fs, boolean familyEmpty) throws Exception {
+
+		byte[] tableName = Bytes.toBytes(tableNameString);
+		
+		try {
+		admin.disableTable(tableNameString);
+		} catch (TableNotEnabledException tne) {
+			
+			LOG.info("In attempting to disable " + tableNameString + " it turns out that the this table is already disabled.");
+		}
+		admin.snapshot(snapshotNameString, tableNameString);
+
+		List<SnapshotDescription> snapshots = SnapshotTestingUtils
+				.assertExistsMatchingSnapshot(admin, snapshotNameString,
+						tableNameString);
+
+		// Create test-timestamp-clone
+		if (snapshots == null || snapshots.size() != 1) {
+			Assert.fail("Incorrect number of snapshots for table "
+					+ String.valueOf(tableNameString));
+		}
+
+		SnapshotTestingUtils.confirmSnapshotValid(snapshots.get(0), tableName,
+				Bytes.toBytes(familyName), rootDir, admin, fs, false, new Path(rootDir,
+						HConstants.HREGION_LOGDIR_NAME), familyEmpty, null);
+	}
+  
+	public static void createSnapshotAndValidate(HBaseAdmin admin,
+			String tableNameString, String familyName, String snapshotNameString, Path rootDir,
+			FileSystem fs) throws Exception {
+
+		createSnapshotAndValidate(admin, tableNameString, familyName, snapshotNameString, rootDir, fs, false);
+	}
 }

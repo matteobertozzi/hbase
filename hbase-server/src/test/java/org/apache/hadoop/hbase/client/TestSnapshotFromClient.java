@@ -189,7 +189,7 @@ public class TestSnapshotFromClient {
 		
 		//verify that the snapshot file is valid
 		 Assert.assertFalse("The snapshot remains valid even though we deleted one of its constituent files", SnapshotTestingUtils.isSnapshotValid(snapshots.get(0), localTableName, TEST_FAM, rootDir,
-			      admin, fs, false, new Path(rootDir, HConstants.HREGION_LOGDIR_NAME), null));
+			      admin, fs, false, new Path(rootDir, HConstants.HREGION_LOGDIR_NAME), false, null));
 		} finally {
 			
 			admin.deleteSnapshot(snapshotName);
