@@ -2335,7 +2335,7 @@ Server {
    * Exposed for TESTING!
    * @return the underlying snapshot manager
    */
-  SnapshotManager getSnapshotManagerForTesting() {
+  public SnapshotManager getSnapshotManagerForTesting() {
     return this.snapshotManager;
   }
 
