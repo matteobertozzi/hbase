@@ -306,7 +306,7 @@ public class SnapshotDescriptionUtils {
    * @throws IOException if we can't reach the filesystem and the file cannot be cleaned up on
    *           failure
    */
-  public static void writeSnasphotInfo(SnapshotDescription snapshot, Path workingDir, FileSystem fs)
+  public static void writeSnapshotInfo(SnapshotDescription snapshot, Path workingDir, FileSystem fs)
       throws IOException {
     FsPermission perms = FSUtils.getFilePermissions(fs, fs.getConf(),
       HConstants.DATA_FILE_UMASK_KEY);
