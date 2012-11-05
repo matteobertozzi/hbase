@@ -125,40 +125,6 @@ public class SnapshotTestingUtils {
   /**
    * Confirm that the snapshot contains references to all the files that should be in the snapshot
    */
-
-  /*public static void confirmSnapshotValid(SnapshotDescription snapshotDescriptor, byte[] tableName,
-      byte[] testFamily, Path rootDir, HBaseAdmin admin, FileSystem fs, boolean requireLogs,
-      Path logsDir, Set<String> snapshotServers) throws IOException {
-    Path snapshotDir = SnapshotDescriptionUtils
-        .getCompletedSnapshotDir(snapshotDescriptor, rootDir);
-    assertTrue(fs.exists(snapshotDir));
-    Path snapshotinfo = new Path(snapshotDir, SnapshotDescriptionUtils.SNAPSHOTINFO_FILE);
-    assertTrue(fs.exists(snapshotinfo));
-    // check the logs dir
-    if (requireLogs) {
-      TakeSnapshotUtils.verifyAllLogsGotReferenced(fs, logsDir, snapshotServers,
-        snapshotDescriptor, new Path(snapshotDir, HConstants.HREGION_LOGDIR_NAME));
-    }
-    // check the table info
-    HTableDescriptor desc = FSTableDescriptors.getTableDescriptor(fs, rootDir, tableName);
-    HTableDescriptor snapshotDesc = FSTableDescriptors.getTableDescriptor(fs, snapshotDir);
-    assertEquals(desc, snapshotDesc);
-
-    // check the region snapshot for all the regions
-    List<HRegionInfo> regions = admin.getTableRegions(tableName);
-    for (HRegionInfo info : regions) {
-      String regionName = info.getEncodedName();
-      Path regionDir = new Path(snapshotDir, regionName);
-      HRegionInfo snapshotRegionInfo = HRegion.loadDotRegionInfoFileContent(fs, regionDir);
-      assertEquals(info, snapshotRegionInfo);
-      // check to make sure we have the family
-      Path familyDir = new Path(regionDir, Bytes.toString(testFamily));
-      assertTrue("Expected to find: " + familyDir + ", but it doesn't exist", fs.exists(familyDir));
-      // make sure we have some files references
-      assertTrue(fs.listStatus(familyDir).length > 0);
-    }
-  }
-*/
 	public static void confirmSnapshotValid(
 			SnapshotDescription snapshotDescriptor, byte[] tableName,
 			byte[] testFamily, Path rootDir, HBaseAdmin admin, FileSystem fs,

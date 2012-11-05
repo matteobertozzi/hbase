@@ -134,48 +134,6 @@ public class TakeSnapshotUtils {
    * @param snapshotLogDir directory for logs in the snapshot
    * @throws IOException
    */
-  
-  /*
-  public static void verifyAllLogsGotReferenced(FileSystem fs, Path logsDir,
-      Set<String> serverNames, SnapshotDescription snapshot, Path snapshotLogDir)
-      throws IOException {
-    assertTrue(snapshot, "Logs directory doesn't exist in snapshot", fs.exists(logsDir));
-    // for each of the server log dirs, make sure it matches the main directory
-    Multimap<String, String> snapshotLogs = getMapOfServersAndLogs(fs, snapshotLogDir, serverNames);
-    Multimap<String, String> realLogs = getMapOfServersAndLogs(fs, logsDir, serverNames);
-    if (realLogs != null) {
-      assertNotNull(snapshot, "No server logs added to snapshot", snapshotLogs);
-    } else if (realLogs == null) {
-      assertNull(snapshot, "Snapshotted server logs that don't exist", snapshotLogs);
-    }
-
-    // check the number of servers
-    Set<Entry<String, Collection<String>>> serverEntries = realLogs.asMap().entrySet();
-    Set<Entry<String, Collection<String>>> snapshotEntries = snapshotLogs.asMap().entrySet();
-    assertEquals(snapshot, "Not the same number of snapshot and original server logs directories",
-      serverEntries.size(), snapshotEntries.size());
-
-    // verify we snapshotted each of the log files
-    for (Entry<String, Collection<String>> serverLogs : serverEntries) {
-      // if the server is not the snapshot, skip checking its logs
-      if (!serverNames.contains(serverLogs.getKey())) continue;
-      Collection<String> snapshotServerLogs = snapshotLogs.get(serverLogs.getKey());
-      assertNotNull(snapshot, "Snapshots missing logs for server:" + serverLogs.getKey(),
-        snapshotServerLogs);
-
-      // check each of the log files
-      assertEquals(snapshot,
-        "Didn't reference all the log files for server:" + serverLogs.getKey(), serverLogs
-            .getValue().size(), snapshotServerLogs.size());
-      for (String log : serverLogs.getValue()) {
-        assertTrue(snapshot, "Snapshot logs didn't include " + log,
-          snapshotServerLogs.contains(log));
-      }
-    }
-  }
-
-*/
-
   /**
    * Verify one of a snapshot's region's recovered.edits, has been at the surface (file names,
    * length), match the original directory.
