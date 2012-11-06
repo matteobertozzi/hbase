@@ -1,6 +1,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -8,8 +9,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.snapshot.exception.RestoreSnapshotException;
+import org.apache.hadoop.hbase.snapshot.exception.SnapshotExistsException;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.After;
 import org.junit.AfterClass;
@@ -28,7 +31,9 @@ public class TestSnapshotRename {
 	private static final String STRING_FAMILY_NAME = "fam";
 	private static final byte[] TEST_FAM = Bytes.toBytes(STRING_FAMILY_NAME);
 	private static final byte[] TABLE_NAME = Bytes.toBytes(STRING_TABLE_NAME);
-	private static HTable originalTableRef;
+	private static final String firstSnapshot = "firstSnapshot";
+	private static final String secondSnapshot = "secondSnapshot";
+	
 
 	/**
 	 * Setup the config for the cluster
@@ -61,7 +66,7 @@ public class TestSnapshotRename {
 
 	@Before
 	public void setup() throws Exception {
-		originalTableRef = UTIL.createTable(TABLE_NAME, TEST_FAM);
+		UTIL.createTable(TABLE_NAME, TEST_FAM);
 	}
 
 	@After
@@ -74,9 +79,7 @@ public class TestSnapshotRename {
 		} catch (IOException e) {
 			LOG.warn("Failure to delete archive directory", e);
 		}
-		// make sure the table cleaner runs
-		//SnapshotCleaner.ensureCleanerRuns(); //TODO: Find out what happened to SnapshotCleaner.
-
+		//TODO: Add the snapshot cleaner back in
 	}
 
 	@AfterClass
@@ -89,6 +92,10 @@ public class TestSnapshotRename {
 	}
 
 	@Test
+	/**
+	 * Verify that the old snapshot is not accessible after a rename.
+	 * @throws Exception
+	 */
 	public void testBasicRename() throws Exception { 
 		
 		HBaseAdmin admin = UTIL.getHBaseAdmin();
@@ -98,10 +105,6 @@ public class TestSnapshotRename {
 		Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem()
 						.getRootDir();
 			
-		//create a snapshot of the table
-		final String firstSnapshot = "firstSnapshot";
-		final String secondSnapshot = "secondSnapshot";
-		
 		SnapshotTestingUtils.createSnapshotAndValidate(admin, STRING_TABLE_NAME, STRING_FAMILY_NAME, firstSnapshot, rootDir, fs, true);
 		//then rename that snapshot
 		
@@ -118,11 +121,16 @@ public class TestSnapshotRename {
 		} finally {
 			
 			admin.enableTable(TABLE_NAME);
+			admin.deleteSnapshot(secondSnapshot);
 		}
 	}
 	
 	@Test
-	public void testRenameToExistingTable() throws Exception {
+	/**
+	 * Verify that renaming a snapshot to an existing snapshot name is not permitted.
+	 * @throws Exception
+	 */
+	public void testRenameToExistingSnapshot() throws Exception {
 		
 		HBaseAdmin admin = UTIL.getHBaseAdmin();
 
@@ -131,10 +139,6 @@ public class TestSnapshotRename {
 		Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem()
 						.getRootDir();
 			
-		//create a snapshot of the table
-		final String firstSnapshot = "firstSnapshot";
-		final String secondSnapshot = "secondSnapshot";
-		
 		SnapshotTestingUtils.createSnapshotAndValidate(admin, STRING_TABLE_NAME, STRING_FAMILY_NAME, firstSnapshot, rootDir, fs, true);
 		//then rename that snapshot
 		
@@ -149,23 +153,42 @@ public class TestSnapshotRename {
 			admin.renameSnapshot(firstSnapshot, secondSnapshot);
 			Assert.fail("We were able to rename " + firstSnapshot
 					+ ", to " + secondSnapshot + " which already exists.");
-		} catch (RestoreSnapshotException rse) {
+		} catch (SnapshotExistsException see) {
 
-			Assert.assertEquals("Unable to find the table name for snapshot="
-					+ firstSnapshot, rse.getLocalizedMessage());
+			Assert.assertTrue("An incorrect error message was produced for this rename operation. " + see.getLocalizedMessage(), see.getLocalizedMessage().contains("A Snapshot named '" + secondSnapshot +"' already exists."));
+		} finally {
+
+			admin.deleteSnapshot(firstSnapshot);
+			admin.deleteSnapshot(secondSnapshot);
 		}
 	}
 	
+	
 	@Test
-	public void testRenameToExistingSnapshot() {
+	/**
+	 * Verify that it is possible to rename a snapshot to a name that was previously deleted
+	 */
+	public void testRenameToDeletedSnapshot() throws Exception {
 		
+		HBaseAdmin admin = UTIL.getHBaseAdmin();
+
+		FileSystem fs = UTIL.getHBaseCluster().getMaster()
+						.getMasterFileSystem().getFileSystem();
+		Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem()
+						.getRootDir();
+			
+		//create a snapshot of the table
+		SnapshotTestingUtils.createSnapshotAndValidate(admin, STRING_TABLE_NAME, STRING_FAMILY_NAME, firstSnapshot, rootDir, fs, true);
+
+		//create snapshot and then delete it
+		SnapshotTestingUtils.createSnapshotAndValidate(admin, STRING_TABLE_NAME, STRING_FAMILY_NAME, secondSnapshot, rootDir, fs, true);
+		admin.deleteSnapshot(secondSnapshot);
 		
+		admin.renameSnapshot(firstSnapshot, secondSnapshot);
 		
+		//verify that all is well with that snapshot
+		List<SnapshotDescription> snapshots = SnapshotTestingUtils.assertExistsMatchingSnapshot(admin, secondSnapshot, STRING_TABLE_NAME);
+		Assert.assertEquals("Incorrect number of matching snapshots", 1, snapshots.size());
+		SnapshotTestingUtils.confirmSnapshotValid(snapshots.get(0), TABLE_NAME, TEST_FAM, rootDir, admin, fs, false, null, true, null);
 	}
-	
-	@Test
-	public void testRenameToDeletedSnapshot() {}
-	
-	private void assertSnapshotIsNotPresent() { }
-	
 }

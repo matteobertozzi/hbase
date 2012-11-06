@@ -228,6 +228,4 @@ public class TestSnapshotCloneIndependence {
 		Assert.assertTrue("The new family was not found. ", originalTableDescriptor.hasFamily(TEST_FAM_2));
 		Assert.assertTrue("The new family was not found. ", !clonedTableDescriptor.hasFamily(TEST_FAM_2));
 	}
-
-	
 }
