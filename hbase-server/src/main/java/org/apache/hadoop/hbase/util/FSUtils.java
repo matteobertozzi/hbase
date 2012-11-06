@@ -924,6 +924,27 @@ public abstract class FSUtils {
   }
 
   /**
+   * A {@link PathFilter} that returns fils.
+   */
+  public static class FileFilter implements PathFilter {
+    private final FileSystem fs;
+
+    public FileFilter(final FileSystem fs) {
+      this.fs = fs;
+    }
+
+    @Override
+    public boolean accept(Path p) {
+      try {
+        return fs.isFile(p);
+      } catch (IOException e) {
+        LOG.debug("unable to verify if path=" + p + " is a regular file", e);
+        return false;
+      }
+    }
+  }
+
+  /**
    * A {@link PathFilter} that returns directories.
    */
   public static class DirFilter implements PathFilter {
@@ -933,20 +954,22 @@ public abstract class FSUtils {
       this.fs = fs;
     }
 
+    @Override
     public boolean accept(Path p) {
       boolean isValid = false;
       try {
         if (HConstants.HBASE_NON_USER_TABLE_DIRS.contains(p.toString())) {
           isValid = false;
         } else {
-            isValid = this.fs.getFileStatus(p).isDir();
+          isValid = this.fs.getFileStatus(p).isDir();
         }
       } catch (IOException e) {
-        e.printStackTrace();
+        LOG.debug("unable to verify if path=" + p + " is a directory", e);
       }
       return isValid;
     }
   }
+
 
   /**
    * Heuristic to determine whether is safe or not to open a file for append
@@ -1112,6 +1135,25 @@ public abstract class FSUtils {
   }
 
   /**
+   * Given a particular region dir, return all the familydirs inside it
+   *
+   * @param fs A file system for the Path
+   * @param regionDir Path to a specific region directory
+   * @return List of paths to valid family directories in region dir.
+   * @throws IOException
+   */
+  public static List<Path> getFamilyDirs(final FileSystem fs, final Path regionDir) throws IOException {
+    // assumes we are in a region dir.
+    FileStatus[] fds = fs.listStatus(regionDir, new FamilyDirFilter(fs));
+    List<Path> familyDirs = new ArrayList<Path>(fds.length);
+    for (FileStatus fdfs: fds) {
+      Path fdPath = fdfs.getPath();
+      familyDirs.add(fdPath);
+    }
+    return familyDirs;
+  }
+
+  /**
    * Filter for HFiles that excludes reference files.
    */
   public static class HFileFilter implements PathFilter {
@@ -1209,7 +1251,7 @@ public abstract class FSUtils {
   
   /**
    * Calls fs.listStatus() and treats FileNotFoundException as non-fatal
-   * This would accommodate difference in various hadoop versions
+   * This accommodates differences between hadoop versions
    * 
    * @param fs file system
    * @param dir directory
@@ -1228,7 +1270,19 @@ public abstract class FSUtils {
     if (status == null || status.length < 1) return null;
     return status;
   }
-  
+
+  /**
+   * Calls fs.listStatus() and treats FileNotFoundException as non-fatal
+   * This would accommodates differences between hadoop versions
+   *
+   * @param fs file system
+   * @param dir directory
+   * @return null if tabledir doesn't exist, otherwise FileStatus array
+   */
+  public static FileStatus[] listStatus(final FileSystem fs, final Path dir) throws IOException {
+    return listStatus(fs, dir, null);
+  }
+
   /**
    * Calls fs.delete() and returns the value returned by the fs.delete()
    * 
@@ -1256,19 +1310,6 @@ public abstract class FSUtils {
   }
 
   /**
-   * Log the current state of the filesystem from a certain root directory
-   * @param fs filesystem to investigate
-   * @param root root file/directory to start logging from
-   * @param LOG log to output information
-   * @throws IOException if an unexpected exception occurs
-   */
-  public static void logFileSystemState(final FileSystem fs, final Path root, Log LOG)
-      throws IOException {
-    LOG.debug("Current file system:");
-    logFSTree(LOG, fs, root, "|-");
-  }
-
-  /**
    * Throw an exception if an action is not permitted by a user on a file.
    * 
    * @param ugi
@@ -1280,7 +1321,7 @@ public abstract class FSUtils {
    */
   public static void checkAccess(UserGroupInformation ugi, FileStatus file,
       FsAction action) throws AccessControlException {
-    if (ugi.getUserName().equals(file.getOwner())) {
+    if (ugi.getShortUserName().equals(file.getOwner())) {
       if (file.getPermission().getUserAction().implies(action)) {
         return;
       }
@@ -1292,7 +1333,7 @@ public abstract class FSUtils {
       return;
     }
     throw new AccessControlException("Permission denied:" + " action=" + action
-        + " path=" + file.getPath() + " user=" + ugi.getUserName());
+        + " path=" + file.getPath() + " user=" + ugi.getShortUserName());
   }
 
   private static boolean contains(String[] groups, String user) {
@@ -1302,6 +1343,19 @@ public abstract class FSUtils {
       }
     }
     return false;
+  }
+
+  /**
+   * Log the current state of the filesystem from a specified 'root' directory
+   * @param fs filesystem to investigate
+   * @param root root file/directory to start searching from
+   * @param LOG log to output information
+   * @throws IOException if an unexpected exception occurs
+   */
+  public static void logFileSystemState(final FileSystem fs, final Path root, Log LOG)
+      throws IOException {
+    LOG.debug("Current file system:");
+    logFSTree(LOG, fs, root, "|-");
   }
 
   /**

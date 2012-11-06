@@ -26,7 +26,11 @@ import java.math.BigDecimal;
 import java.util.Arrays;
 
 import junit.framework.TestCase;
+import org.junit.experimental.categories.Category;
+import org.apache.hadoop.hbase.SmallTests;
 
+
+@Category(SmallTests.class)
 public class TestBytes extends TestCase {
   public void testNullHashCode() {
     byte [] b = null;
@@ -297,6 +301,11 @@ public class TestBytes extends TestCase {
     } catch (StringIndexOutOfBoundsException ex) {
       fail("Illegal string access: " + ex.getMessage());
     }
+  }
+
+  public void testToStringBinary_toBytesBinary_Reversable() throws Exception {
+    String bytes = Bytes.toStringBinary(Bytes.toBytes(2.17));
+    assertEquals(2.17, Bytes.toDouble(Bytes.toBytesBinary(bytes)), 0);        
   }
 }
 

@@ -43,7 +43,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
   private final FileSystem fs;
   private final Path oldFileDir;
   private final Configuration conf;
-  private List<T> cleanersChain;
+  protected List<T> cleanersChain;
 
   /**
    * @param name name of the chore being run
@@ -73,7 +73,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
   protected abstract boolean validate(Path file);
 
   /**
-   * Instanitate and initialize all the file cleaners set in the configuration
+   * Instantiate and initialize all the file cleaners set in the configuration
    * @param confKey key to get the file cleaner classes from the configuration
    */
   private void initCleanerChain(String confKey) {
@@ -82,7 +82,10 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
     if (logCleaners != null) {
       for (String className : logCleaners) {
         T logCleaner = newFileCleaner(className, conf);
-        if (logCleaner != null) this.cleanersChain.add(logCleaner);
+        if (logCleaner != null) {
+          LOG.debug("initialize cleaner=" + className);
+          this.cleanersChain.add(logCleaner);
+        }
       }
     }
   }
@@ -126,7 +129,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
         }
       }
     } catch (IOException e) {
-      LOG.warn("Failed to get status of:" + oldFileDir);
+      LOG.warn("Failed to get status of: " + oldFileDir);
     }
 
   }
@@ -172,7 +175,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
    * @throws IOException
    */
   private FileStatus[] checkAndDeleteDirectory(Path toCheck) throws IOException {
-    LOG.debug("Attempting to delete directory:" + toCheck);
+    LOG.debug("Attempting to delete directory: " + toCheck);
     // if it doesn't exist, we are done
     if (!fs.exists(toCheck)) return null;
     // get the files below the directory
@@ -196,7 +199,7 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
    */
   private void checkAndDelete(Path filePath) throws IOException, IllegalArgumentException {
     if (!validate(filePath)) {
-      LOG.warn("Found a wrongly formatted file: " + filePath.getName() + "deleting it.");
+      LOG.warn("Found a wrongly formatted file: " + filePath.getName() + " deleting it.");
       if (!this.fs.delete(filePath, true)) {
         LOG.warn("Attempted to delete:" + filePath
             + ", but couldn't. Run cleaner chain and attempt to delete on next pass.");
@@ -205,21 +208,21 @@ public abstract class CleanerChore<T extends FileCleanerDelegate> extends Chore 
     }
     for (T cleaner : cleanersChain) {
       if (cleaner.isStopped()) {
-        LOG.warn("A file cleaner" + this.getName() + " is stopped, won't delete any file in:"
+        LOG.warn("A file cleaner " + this.getName() + " is stopped, won't delete any file in: "
             + this.oldFileDir);
         return;
       }
 
       if (!cleaner.isFileDeletable(filePath)) {
         // this file is not deletable, then we are done
-        LOG.debug(filePath + " is not deletable according to:" + cleaner);
+        LOG.debug(filePath + " is not deletable according to: " + cleaner);
         return;
       }
     }
     // delete this file if it passes all the cleaners
-    LOG.debug("Removing:" + filePath + " from archive");
+    LOG.debug("Removing: " + filePath + " from archive");
     if (!this.fs.delete(filePath, false)) {
-      LOG.warn("Attempted to delete:" + filePath
+      LOG.warn("Attempted to delete: " + filePath
           + ", but couldn't. Run cleaner chain and attempt to delete on next pass.");
     }
   }

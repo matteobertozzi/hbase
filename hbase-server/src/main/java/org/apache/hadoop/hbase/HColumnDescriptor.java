@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.ColumnFamilySchema;
 import org.apache.hadoop.hbase.regionserver.StoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreFile.BloomType;
+import org.apache.hadoop.hbase.regionserver.wal.HLog;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableComparable;
@@ -420,7 +421,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @throws IllegalArgumentException If not null and not a legitimate family
    * name: i.e. 'printable' and ends in a ':' (Null passes are allowed because
    * <code>b</code> can be null when deserializing).  Cannot start with a '.'
-   * either. Also Family can not be an empty value.
+   * either. Also Family can not be an empty value or equals to "recovered.edits".
    */
   public static byte [] isLegalFamilyName(final byte [] b) {
     if (b == null) {
@@ -437,6 +438,11 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
           ">. Family names cannot contain control characters or colons: " +
           Bytes.toString(b));
       }
+    }
+    byte[] recoveredEdit = Bytes.toBytes(HLog.RECOVERED_EDITS_DIR);
+    if (Bytes.equals(recoveredEdit, b)) {
+      throw new IllegalArgumentException("Family name cannot be: " +
+          HLog.RECOVERED_EDITS_DIR);
     }
     return b;
   }
@@ -1086,7 +1092,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
 
   /**
    * @return This instance serialized with pb with pb magic prefix
-   * @see {@link #parseFrom(byte[])}
+   * @see #parseFrom(byte[])
    */
   public byte [] toByteArray() {
     return ProtobufUtil.prependPBMagic(convert().toByteArray());
@@ -1096,7 +1102,7 @@ public class HColumnDescriptor implements WritableComparable<HColumnDescriptor> 
    * @param bytes A pb serialized {@link HColumnDescriptor} instance with pb magic prefix
    * @return An instance of {@link HColumnDescriptor} made from <code>bytes</code>
    * @throws DeserializationException
-   * @see {@link #toByteArray()}
+   * @see #toByteArray()
    */
   public static HColumnDescriptor parseFrom(final byte [] bytes) throws DeserializationException {
     if (!ProtobufUtil.isPBMagicPrefix(bytes)) throw new DeserializationException("No magic");
