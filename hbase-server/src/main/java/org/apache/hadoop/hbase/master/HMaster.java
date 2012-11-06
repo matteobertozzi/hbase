@@ -2438,7 +2438,7 @@ Server {
 
     // check to see if we already completed the snapshot
     if (isSnapshotCompleted(snapshot)) {
-      throw new ServiceException(new SnapshotExistsException("Snasphot:" + snapshot.getName()
+      throw new ServiceException(new SnapshotExistsException("Snapshot:" + snapshot.getName()
           + " already stored on the filesystem.", snapshot));
     }
 
