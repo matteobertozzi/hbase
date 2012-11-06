@@ -337,10 +337,11 @@ public class TestSnapshotFromClient {
 			admin.snapshot("fail", tableName);
 			fail("Snapshot succeeded even though there is not table.");
 		} catch (RemoteException re) {
+			final String expectedErrorMessage = "Table: " + tableName + " does not exist, therefore we cannot take a snapshot.";
 			Assert.assertTrue(
-					"Error message was incorrect",
-					re.getLocalizedMessage().contains(
-									"Table: " + tableName + " doesn't exist, therefore we cannot take a snapshot."));
+					"Error message was incorrect. Expected the error to contain " +  
+							expectedErrorMessage + " but it was " + re.getLocalizedMessage(),
+					re.getLocalizedMessage().contains(expectedErrorMessage));
 			LOG.info("Correctly failed to snapshot a non-existant table:" + re.getMessage());
 		}
 	}
