@@ -94,9 +94,6 @@ public class TestSnapshotCloneIndependence {
 		} catch (IOException e) {
 			LOG.warn("Failure to delete archive directory", e);
 		}
-		// make sure the table cleaner runs
-		//SnapshotCleaner.ensureCleanerRuns();
-
 	}
 
 	@AfterClass
@@ -165,7 +162,6 @@ public class TestSnapshotCloneIndependence {
 		p = new Put(Bytes.toBytes(rowKey));
 		p.add(TEST_FAM, Bytes.toBytes("someQualifier"), Bytes.toBytes("someString"));
 		clonedTable.put(p);
-		clonedTable.flushCommits();
 		
 		// Verify that it is not present in the original table
 		Assert.assertEquals("The row count of the original table was modified by the put to the clone", origTableLineCount +1, UTIL.countRows(original));
