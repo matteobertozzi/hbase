@@ -16882,6 +16882,833 @@ public final class MasterAdminProtos {
     // @@protoc_insertion_point(class_scope:DeleteSnapshotResponse)
   }
   
+  public interface RenameSnapshotRequestOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+    
+    // required string name = 1;
+    boolean hasName();
+    String getName();
+    
+    // required string newName = 2;
+    boolean hasNewName();
+    String getNewName();
+  }
+  public static final class RenameSnapshotRequest extends
+      com.google.protobuf.GeneratedMessage
+      implements RenameSnapshotRequestOrBuilder {
+    // Use RenameSnapshotRequest.newBuilder() to construct.
+    private RenameSnapshotRequest(Builder builder) {
+      super(builder);
+    }
+    private RenameSnapshotRequest(boolean noInit) {}
+    
+    private static final RenameSnapshotRequest defaultInstance;
+    public static RenameSnapshotRequest getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public RenameSnapshotRequest getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.internal_static_RenameSnapshotRequest_descriptor;
+    }
+    
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.internal_static_RenameSnapshotRequest_fieldAccessorTable;
+    }
+    
+    private int bitField0_;
+    // required string name = 1;
+    public static final int NAME_FIELD_NUMBER = 1;
+    private java.lang.Object name_;
+    public boolean hasName() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    public String getName() {
+      java.lang.Object ref = name_;
+      if (ref instanceof String) {
+        return (String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        String s = bs.toStringUtf8();
+        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+          name_ = s;
+        }
+        return s;
+      }
+    }
+    private com.google.protobuf.ByteString getNameBytes() {
+      java.lang.Object ref = name_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+        name_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    
+    // required string newName = 2;
+    public static final int NEWNAME_FIELD_NUMBER = 2;
+    private java.lang.Object newName_;
+    public boolean hasNewName() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    public String getNewName() {
+      java.lang.Object ref = newName_;
+      if (ref instanceof String) {
+        return (String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        String s = bs.toStringUtf8();
+        if (com.google.protobuf.Internal.isValidUtf8(bs)) {
+          newName_ = s;
+        }
+        return s;
+      }
+    }
+    private com.google.protobuf.ByteString getNewNameBytes() {
+      java.lang.Object ref = newName_;
+      if (ref instanceof String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8((String) ref);
+        newName_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+    
+    private void initFields() {
+      name_ = "";
+      newName_ = "";
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+      
+      if (!hasName()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasNewName()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+    
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeBytes(1, getNameBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeBytes(2, getNewNameBytes());
+      }
+      getUnknownFields().writeTo(output);
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+    
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(1, getNameBytes());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBytesSize(2, getNewNameBytes());
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+    
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+    
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest other = (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest) obj;
+      
+      boolean result = true;
+      result = result && (hasName() == other.hasName());
+      if (hasName()) {
+        result = result && getName()
+            .equals(other.getName());
+      }
+      result = result && (hasNewName() == other.hasNewName());
+      if (hasNewName()) {
+        result = result && getNewName()
+            .equals(other.getNewName());
+      }
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+    
+    @java.lang.Override
+    public int hashCode() {
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasName()) {
+        hash = (37 * hash) + NAME_FIELD_NUMBER;
+        hash = (53 * hash) + getName().hashCode();
+      }
+      if (hasNewName()) {
+        hash = (37 * hash) + NEWNAME_FIELD_NUMBER;
+        hash = (53 * hash) + getNewName().hashCode();
+      }
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      return hash;
+    }
+    
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+    
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequestOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.internal_static_RenameSnapshotRequest_descriptor;
+      }
+      
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.internal_static_RenameSnapshotRequest_fieldAccessorTable;
+      }
+      
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+      
+      private Builder(BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+      
+      public Builder clear() {
+        super.clear();
+        name_ = "";
+        bitField0_ = (bitField0_ & ~0x00000001);
+        newName_ = "";
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+      
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+      
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest.getDescriptor();
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest.getDefaultInstance();
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest build() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+      
+      private org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest result = new org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        result.name_ = name_;
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        result.newName_ = newName_;
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+      
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+      
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest.getDefaultInstance()) return this;
+        if (other.hasName()) {
+          setName(other.getName());
+        }
+        if (other.hasNewName()) {
+          setNewName(other.getNewName());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+      
+      public final boolean isInitialized() {
+        if (!hasName()) {
+          
+          return false;
+        }
+        if (!hasNewName()) {
+          
+          return false;
+        }
+        return true;
+      }
+      
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+            case 10: {
+              bitField0_ |= 0x00000001;
+              name_ = input.readBytes();
+              break;
+            }
+            case 18: {
+              bitField0_ |= 0x00000002;
+              newName_ = input.readBytes();
+              break;
+            }
+          }
+        }
+      }
+      
+      private int bitField0_;
+      
+      // required string name = 1;
+      private java.lang.Object name_ = "";
+      public boolean hasName() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      public String getName() {
+        java.lang.Object ref = name_;
+        if (!(ref instanceof String)) {
+          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+          name_ = s;
+          return s;
+        } else {
+          return (String) ref;
+        }
+      }
+      public Builder setName(String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000001;
+        name_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearName() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        name_ = getDefaultInstance().getName();
+        onChanged();
+        return this;
+      }
+      void setName(com.google.protobuf.ByteString value) {
+        bitField0_ |= 0x00000001;
+        name_ = value;
+        onChanged();
+      }
+      
+      // required string newName = 2;
+      private java.lang.Object newName_ = "";
+      public boolean hasNewName() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      public String getNewName() {
+        java.lang.Object ref = newName_;
+        if (!(ref instanceof String)) {
+          String s = ((com.google.protobuf.ByteString) ref).toStringUtf8();
+          newName_ = s;
+          return s;
+        } else {
+          return (String) ref;
+        }
+      }
+      public Builder setNewName(String value) {
+        if (value == null) {
+    throw new NullPointerException();
+  }
+  bitField0_ |= 0x00000002;
+        newName_ = value;
+        onChanged();
+        return this;
+      }
+      public Builder clearNewName() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        newName_ = getDefaultInstance().getNewName();
+        onChanged();
+        return this;
+      }
+      void setNewName(com.google.protobuf.ByteString value) {
+        bitField0_ |= 0x00000002;
+        newName_ = value;
+        onChanged();
+      }
+      
+      // @@protoc_insertion_point(builder_scope:RenameSnapshotRequest)
+    }
+    
+    static {
+      defaultInstance = new RenameSnapshotRequest(true);
+      defaultInstance.initFields();
+    }
+    
+    // @@protoc_insertion_point(class_scope:RenameSnapshotRequest)
+  }
+  
+  public interface RenameSnapshotResponseOrBuilder
+      extends com.google.protobuf.MessageOrBuilder {
+  }
+  public static final class RenameSnapshotResponse extends
+      com.google.protobuf.GeneratedMessage
+      implements RenameSnapshotResponseOrBuilder {
+    // Use RenameSnapshotResponse.newBuilder() to construct.
+    private RenameSnapshotResponse(Builder builder) {
+      super(builder);
+    }
+    private RenameSnapshotResponse(boolean noInit) {}
+    
+    private static final RenameSnapshotResponse defaultInstance;
+    public static RenameSnapshotResponse getDefaultInstance() {
+      return defaultInstance;
+    }
+    
+    public RenameSnapshotResponse getDefaultInstanceForType() {
+      return defaultInstance;
+    }
+    
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.internal_static_RenameSnapshotResponse_descriptor;
+    }
+    
+    protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.internal_static_RenameSnapshotResponse_fieldAccessorTable;
+    }
+    
+    private void initFields() {
+    }
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized != -1) return isInitialized == 1;
+      
+      memoizedIsInitialized = 1;
+      return true;
+    }
+    
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      getSerializedSize();
+      getUnknownFields().writeTo(output);
+    }
+    
+    private int memoizedSerializedSize = -1;
+    public int getSerializedSize() {
+      int size = memoizedSerializedSize;
+      if (size != -1) return size;
+    
+      size = 0;
+      size += getUnknownFields().getSerializedSize();
+      memoizedSerializedSize = size;
+      return size;
+    }
+    
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    protected java.lang.Object writeReplace()
+        throws java.io.ObjectStreamException {
+      return super.writeReplace();
+    }
+    
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse other = (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse) obj;
+      
+      boolean result = true;
+      result = result &&
+          getUnknownFields().equals(other.getUnknownFields());
+      return result;
+    }
+    
+    @java.lang.Override
+    public int hashCode() {
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      return hash;
+    }
+    
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return newBuilder().mergeFrom(data, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      Builder builder = newBuilder();
+      if (builder.mergeDelimitedFrom(input, extensionRegistry)) {
+        return builder.buildParsed();
+      } else {
+        return null;
+      }
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input).buildParsed();
+    }
+    public static org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return newBuilder().mergeFrom(input, extensionRegistry)
+               .buildParsed();
+    }
+    
+    public static Builder newBuilder() { return Builder.create(); }
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder(org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse prototype) {
+      return newBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() { return newBuilder(this); }
+    
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessage.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessage.Builder<Builder>
+       implements org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponseOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.internal_static_RenameSnapshotResponse_descriptor;
+      }
+      
+      protected com.google.protobuf.GeneratedMessage.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.internal_static_RenameSnapshotResponse_fieldAccessorTable;
+      }
+      
+      // Construct using org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+      
+      private Builder(BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (com.google.protobuf.GeneratedMessage.alwaysUseFieldBuilders) {
+        }
+      }
+      private static Builder create() {
+        return new Builder();
+      }
+      
+      public Builder clear() {
+        super.clear();
+        return this;
+      }
+      
+      public Builder clone() {
+        return create().mergeFrom(buildPartial());
+      }
+      
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse.getDescriptor();
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse.getDefaultInstance();
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse build() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+      
+      private org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse buildParsed()
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(
+            result).asInvalidProtocolBufferException();
+        }
+        return result;
+      }
+      
+      public org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse buildPartial() {
+        org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse result = new org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse(this);
+        onBuilt();
+        return result;
+      }
+      
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse) {
+          return mergeFrom((org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+      
+      public Builder mergeFrom(org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse other) {
+        if (other == org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse.getDefaultInstance()) return this;
+        this.mergeUnknownFields(other.getUnknownFields());
+        return this;
+      }
+      
+      public final boolean isInitialized() {
+        return true;
+      }
+      
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          com.google.protobuf.UnknownFieldSet.newBuilder(
+            this.getUnknownFields());
+        while (true) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              this.setUnknownFields(unknownFields.build());
+              onChanged();
+              return this;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                this.setUnknownFields(unknownFields.build());
+                onChanged();
+                return this;
+              }
+              break;
+            }
+          }
+        }
+      }
+      
+      
+      // @@protoc_insertion_point(builder_scope:RenameSnapshotResponse)
+    }
+    
+    static {
+      defaultInstance = new RenameSnapshotResponse(true);
+      defaultInstance.initFields();
+    }
+    
+    // @@protoc_insertion_point(class_scope:RenameSnapshotResponse)
+  }
+  
   public interface RestoreSnapshotRequestOrBuilder
       extends com.google.protobuf.MessageOrBuilder {
     
@@ -19614,6 +20441,11 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse> done);
       
+      public abstract void renameSnapshot(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse> done);
+      
       public abstract void deleteSnapshot(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest request,
@@ -19816,6 +20648,14 @@ public final class MasterAdminProtos {
         }
         
         @java.lang.Override
+        public  void renameSnapshot(
+            com.google.protobuf.RpcController controller,
+            org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest request,
+            com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse> done) {
+          impl.renameSnapshot(controller, request, done);
+        }
+        
+        @java.lang.Override
         public  void deleteSnapshot(
             com.google.protobuf.RpcController controller,
             org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest request,
@@ -19914,12 +20754,14 @@ public final class MasterAdminProtos {
             case 21:
               return impl.listSnapshots(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest)request);
             case 22:
-              return impl.deleteSnapshot(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest)request);
+              return impl.renameSnapshot(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest)request);
             case 23:
-              return impl.isSnapshotDone(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest)request);
+              return impl.deleteSnapshot(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest)request);
             case 24:
-              return impl.restoreSnapshot(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotRequest)request);
+              return impl.isSnapshotDone(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest)request);
             case 25:
+              return impl.restoreSnapshot(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotRequest)request);
+            case 26:
               return impl.isRestoreSnapshotDone(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneRequest)request);
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -19980,12 +20822,14 @@ public final class MasterAdminProtos {
             case 21:
               return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest.getDefaultInstance();
             case 22:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest.getDefaultInstance();
             case 23:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest.getDefaultInstance();
             case 24:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotRequest.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest.getDefaultInstance();
             case 25:
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotRequest.getDefaultInstance();
+            case 26:
               return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneRequest.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -20046,12 +20890,14 @@ public final class MasterAdminProtos {
             case 21:
               return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse.getDefaultInstance();
             case 22:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse.getDefaultInstance();
             case 23:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotResponse.getDefaultInstance();
             case 24:
-              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotResponse.getDefaultInstance();
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse.getDefaultInstance();
             case 25:
+              return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotResponse.getDefaultInstance();
+            case 26:
               return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneResponse.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -20170,6 +21016,11 @@ public final class MasterAdminProtos {
         com.google.protobuf.RpcController controller,
         org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest request,
         com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse> done);
+    
+    public abstract void renameSnapshot(
+        com.google.protobuf.RpcController controller,
+        org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest request,
+        com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse> done);
     
     public abstract void deleteSnapshot(
         com.google.protobuf.RpcController controller,
@@ -20324,21 +21175,26 @@ public final class MasterAdminProtos {
               done));
           return;
         case 22:
+          this.renameSnapshot(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest)request,
+            com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse>specializeCallback(
+              done));
+          return;
+        case 23:
           this.deleteSnapshot(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotResponse>specializeCallback(
               done));
           return;
-        case 23:
+        case 24:
           this.isSnapshotDone(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse>specializeCallback(
               done));
           return;
-        case 24:
+        case 25:
           this.restoreSnapshot(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotResponse>specializeCallback(
               done));
           return;
-        case 25:
+        case 26:
           this.isRestoreSnapshotDone(controller, (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneRequest)request,
             com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneResponse>specializeCallback(
               done));
@@ -20402,12 +21258,14 @@ public final class MasterAdminProtos {
         case 21:
           return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest.getDefaultInstance();
         case 22:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest.getDefaultInstance();
         case 23:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest.getDefaultInstance();
         case 24:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotRequest.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest.getDefaultInstance();
         case 25:
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotRequest.getDefaultInstance();
+        case 26:
           return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneRequest.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
@@ -20468,12 +21326,14 @@ public final class MasterAdminProtos {
         case 21:
           return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse.getDefaultInstance();
         case 22:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse.getDefaultInstance();
         case 23:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotResponse.getDefaultInstance();
         case 24:
-          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotResponse.getDefaultInstance();
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse.getDefaultInstance();
         case 25:
+          return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotResponse.getDefaultInstance();
+        case 26:
           return org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneResponse.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
@@ -20826,12 +21686,27 @@ public final class MasterAdminProtos {
             org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse.getDefaultInstance()));
       }
       
+      public  void renameSnapshot(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest request,
+          com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse> done) {
+        channel.callMethod(
+          getDescriptor().getMethods().get(22),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse.getDefaultInstance(),
+          com.google.protobuf.RpcUtil.generalizeCallback(
+            done,
+            org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse.class,
+            org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse.getDefaultInstance()));
+      }
+      
       public  void deleteSnapshot(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(22),
+          getDescriptor().getMethods().get(23),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotResponse.getDefaultInstance(),
@@ -20846,7 +21721,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(23),
+          getDescriptor().getMethods().get(24),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse.getDefaultInstance(),
@@ -20861,7 +21736,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(24),
+          getDescriptor().getMethods().get(25),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotResponse.getDefaultInstance(),
@@ -20876,7 +21751,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneRequest request,
           com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(25),
+          getDescriptor().getMethods().get(26),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneResponse.getDefaultInstance(),
@@ -21001,6 +21876,11 @@ public final class MasterAdminProtos {
       public org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotResponse listSnapshots(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.ListSnapshotRequest request)
+          throws com.google.protobuf.ServiceException;
+      
+      public org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse renameSnapshot(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest request)
           throws com.google.protobuf.ServiceException;
       
       public org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotResponse deleteSnapshot(
@@ -21295,12 +22175,24 @@ public final class MasterAdminProtos {
       }
       
       
+      public org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse renameSnapshot(
+          com.google.protobuf.RpcController controller,
+          org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest request)
+          throws com.google.protobuf.ServiceException {
+        return (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse) channel.callBlockingMethod(
+          getDescriptor().getMethods().get(22),
+          controller,
+          request,
+          org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse.getDefaultInstance());
+      }
+      
+      
       public org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotResponse deleteSnapshot(
           com.google.protobuf.RpcController controller,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(22),
+          getDescriptor().getMethods().get(23),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotResponse.getDefaultInstance());
@@ -21312,7 +22204,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(23),
+          getDescriptor().getMethods().get(24),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse.getDefaultInstance());
@@ -21324,7 +22216,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(24),
+          getDescriptor().getMethods().get(25),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotResponse.getDefaultInstance());
@@ -21336,7 +22228,7 @@ public final class MasterAdminProtos {
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneRequest request)
           throws com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(25),
+          getDescriptor().getMethods().get(26),
           controller,
           request,
           org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneResponse.getDefaultInstance());
@@ -21566,6 +22458,16 @@ public final class MasterAdminProtos {
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
       internal_static_DeleteSnapshotResponse_fieldAccessorTable;
   private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_RenameSnapshotRequest_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_RenameSnapshotRequest_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
+    internal_static_RenameSnapshotResponse_descriptor;
+  private static
+    com.google.protobuf.GeneratedMessage.FieldAccessorTable
+      internal_static_RenameSnapshotResponse_fieldAccessorTable;
+  private static com.google.protobuf.Descriptors.Descriptor
     internal_static_RestoreSnapshotRequest_descriptor;
   private static
     com.google.protobuf.GeneratedMessage.FieldAccessorTable
@@ -21652,60 +22554,64 @@ public final class MasterAdminProtos {
       "ts\030\001 \003(\0132\024.SnapshotDescription\"?\n\025Delete" +
       "SnapshotRequest\022&\n\010snapshot\030\001 \002(\0132\024.Snap" +
       "shotDescription\"\030\n\026DeleteSnapshotRespons" +
-      "e\"@\n\026RestoreSnapshotRequest\022&\n\010snapshot\030" +
-      "\001 \002(\0132\024.SnapshotDescription\"\031\n\027RestoreSn",
-      "apshotResponse\"?\n\025IsSnapshotDoneRequest\022" +
-      "&\n\010snapshot\030\001 \001(\0132\024.SnapshotDescription\"" +
-      "U\n\026IsSnapshotDoneResponse\022\023\n\004done\030\001 \001(\010:" +
-      "\005false\022&\n\010snapshot\030\002 \001(\0132\024.SnapshotDescr" +
-      "iption\"F\n\034IsRestoreSnapshotDoneRequest\022&" +
-      "\n\010snapshot\030\001 \001(\0132\024.SnapshotDescription\"3" +
-      "\n\035IsRestoreSnapshotDoneResponse\022\022\n\004done\030" +
-      "\001 \001(\010:\004true2\234\r\n\022MasterAdminService\0222\n\tad" +
-      "dColumn\022\021.AddColumnRequest\032\022.AddColumnRe" +
-      "sponse\022;\n\014deleteColumn\022\024.DeleteColumnReq",
-      "uest\032\025.DeleteColumnResponse\022;\n\014modifyCol" +
-      "umn\022\024.ModifyColumnRequest\032\025.ModifyColumn" +
-      "Response\0225\n\nmoveRegion\022\022.MoveRegionReque" +
-      "st\032\023.MoveRegionResponse\022;\n\014assignRegion\022" +
-      "\024.AssignRegionRequest\032\025.AssignRegionResp" +
-      "onse\022A\n\016unassignRegion\022\026.UnassignRegionR" +
-      "equest\032\027.UnassignRegionResponse\022>\n\roffli" +
-      "neRegion\022\025.OfflineRegionRequest\032\026.Offlin" +
-      "eRegionResponse\0228\n\013deleteTable\022\023.DeleteT" +
-      "ableRequest\032\024.DeleteTableResponse\0228\n\013ena",
-      "bleTable\022\023.EnableTableRequest\032\024.EnableTa" +
-      "bleResponse\022;\n\014disableTable\022\024.DisableTab" +
-      "leRequest\032\025.DisableTableResponse\0228\n\013modi" +
-      "fyTable\022\023.ModifyTableRequest\032\024.ModifyTab" +
-      "leResponse\0228\n\013createTable\022\023.CreateTableR" +
-      "equest\032\024.CreateTableResponse\022/\n\010shutdown" +
-      "\022\020.ShutdownRequest\032\021.ShutdownResponse\0225\n" +
-      "\nstopMaster\022\022.StopMasterRequest\032\023.StopMa" +
-      "sterResponse\022,\n\007balance\022\017.BalanceRequest" +
-      "\032\020.BalanceResponse\022M\n\022setBalancerRunning",
-      "\022\032.SetBalancerRunningRequest\032\033.SetBalanc" +
-      "erRunningResponse\022;\n\016runCatalogScan\022\023.Ca" +
-      "talogScanRequest\032\024.CatalogScanResponse\022S" +
-      "\n\024enableCatalogJanitor\022\034.EnableCatalogJa" +
-      "nitorRequest\032\035.EnableCatalogJanitorRespo" +
-      "nse\022\\\n\027isCatalogJanitorEnabled\022\037.IsCatal" +
-      "ogJanitorEnabledRequest\032 .IsCatalogJanit" +
-      "orEnabledResponse\022L\n\021execMasterService\022\032" +
-      ".CoprocessorServiceRequest\032\033.Coprocessor" +
-      "ServiceResponse\0227\n\010snapshot\022\024.TakeSnapsh",
-      "otRequest\032\025.TakeSnapshotResponse\022<\n\rlist" +
-      "Snapshots\022\024.ListSnapshotRequest\032\025.ListSn" +
-      "apshotResponse\022A\n\016deleteSnapshot\022\026.Delet" +
-      "eSnapshotRequest\032\027.DeleteSnapshotRespons" +
-      "e\022A\n\016isSnapshotDone\022\026.IsSnapshotDoneRequ" +
-      "est\032\027.IsSnapshotDoneResponse\022D\n\017restoreS" +
-      "napshot\022\027.RestoreSnapshotRequest\032\030.Resto" +
-      "reSnapshotResponse\022V\n\025isRestoreSnapshotD" +
-      "one\022\035.IsRestoreSnapshotDoneRequest\032\036.IsR" +
-      "estoreSnapshotDoneResponseBG\n*org.apache",
-      ".hadoop.hbase.protobuf.generatedB\021Master" +
-      "AdminProtosH\001\210\001\001\240\001\001"
+      "e\"6\n\025RenameSnapshotRequest\022\014\n\004name\030\001 \002(\t" +
+      "\022\017\n\007newName\030\002 \002(\t\"\030\n\026RenameSnapshotRespo",
+      "nse\"@\n\026RestoreSnapshotRequest\022&\n\010snapsho" +
+      "t\030\001 \002(\0132\024.SnapshotDescription\"\031\n\027Restore" +
+      "SnapshotResponse\"?\n\025IsSnapshotDoneReques" +
+      "t\022&\n\010snapshot\030\001 \001(\0132\024.SnapshotDescriptio" +
+      "n\"U\n\026IsSnapshotDoneResponse\022\023\n\004done\030\001 \001(" +
+      "\010:\005false\022&\n\010snapshot\030\002 \001(\0132\024.SnapshotDes" +
+      "cription\"F\n\034IsRestoreSnapshotDoneRequest" +
+      "\022&\n\010snapshot\030\001 \001(\0132\024.SnapshotDescription" +
+      "\"3\n\035IsRestoreSnapshotDoneResponse\022\022\n\004don" +
+      "e\030\001 \001(\010:\004true2\337\r\n\022MasterAdminService\0222\n\t",
+      "addColumn\022\021.AddColumnRequest\032\022.AddColumn" +
+      "Response\022;\n\014deleteColumn\022\024.DeleteColumnR" +
+      "equest\032\025.DeleteColumnResponse\022;\n\014modifyC" +
+      "olumn\022\024.ModifyColumnRequest\032\025.ModifyColu" +
+      "mnResponse\0225\n\nmoveRegion\022\022.MoveRegionReq" +
+      "uest\032\023.MoveRegionResponse\022;\n\014assignRegio" +
+      "n\022\024.AssignRegionRequest\032\025.AssignRegionRe" +
+      "sponse\022A\n\016unassignRegion\022\026.UnassignRegio" +
+      "nRequest\032\027.UnassignRegionResponse\022>\n\roff" +
+      "lineRegion\022\025.OfflineRegionRequest\032\026.Offl",
+      "ineRegionResponse\0228\n\013deleteTable\022\023.Delet" +
+      "eTableRequest\032\024.DeleteTableResponse\0228\n\013e" +
+      "nableTable\022\023.EnableTableRequest\032\024.Enable" +
+      "TableResponse\022;\n\014disableTable\022\024.DisableT" +
+      "ableRequest\032\025.DisableTableResponse\0228\n\013mo" +
+      "difyTable\022\023.ModifyTableRequest\032\024.ModifyT" +
+      "ableResponse\0228\n\013createTable\022\023.CreateTabl" +
+      "eRequest\032\024.CreateTableResponse\022/\n\010shutdo" +
+      "wn\022\020.ShutdownRequest\032\021.ShutdownResponse\022" +
+      "5\n\nstopMaster\022\022.StopMasterRequest\032\023.Stop",
+      "MasterResponse\022,\n\007balance\022\017.BalanceReque" +
+      "st\032\020.BalanceResponse\022M\n\022setBalancerRunni" +
+      "ng\022\032.SetBalancerRunningRequest\032\033.SetBala" +
+      "ncerRunningResponse\022;\n\016runCatalogScan\022\023." +
+      "CatalogScanRequest\032\024.CatalogScanResponse" +
+      "\022S\n\024enableCatalogJanitor\022\034.EnableCatalog" +
+      "JanitorRequest\032\035.EnableCatalogJanitorRes" +
+      "ponse\022\\\n\027isCatalogJanitorEnabled\022\037.IsCat" +
+      "alogJanitorEnabledRequest\032 .IsCatalogJan" +
+      "itorEnabledResponse\022L\n\021execMasterService",
+      "\022\032.CoprocessorServiceRequest\032\033.Coprocess" +
+      "orServiceResponse\0227\n\010snapshot\022\024.TakeSnap" +
+      "shotRequest\032\025.TakeSnapshotResponse\022<\n\rli" +
+      "stSnapshots\022\024.ListSnapshotRequest\032\025.List" +
+      "SnapshotResponse\022A\n\016renameSnapshot\022\026.Ren" +
+      "ameSnapshotRequest\032\027.RenameSnapshotRespo" +
+      "nse\022A\n\016deleteSnapshot\022\026.DeleteSnapshotRe" +
+      "quest\032\027.DeleteSnapshotResponse\022A\n\016isSnap" +
+      "shotDone\022\026.IsSnapshotDoneRequest\032\027.IsSna" +
+      "pshotDoneResponse\022D\n\017restoreSnapshot\022\027.R",
+      "estoreSnapshotRequest\032\030.RestoreSnapshotR" +
+      "esponse\022V\n\025isRestoreSnapshotDone\022\035.IsRes" +
+      "toreSnapshotDoneRequest\032\036.IsRestoreSnaps" +
+      "hotDoneResponseBG\n*org.apache.hadoop.hba" +
+      "se.protobuf.generatedB\021MasterAdminProtos" +
+      "H\001\210\001\001\240\001\001"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
       new com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner() {
@@ -22064,8 +22970,24 @@ public final class MasterAdminProtos {
               new java.lang.String[] { },
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotResponse.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.DeleteSnapshotResponse.Builder.class);
-          internal_static_RestoreSnapshotRequest_descriptor =
+          internal_static_RenameSnapshotRequest_descriptor =
             getDescriptor().getMessageTypes().get(44);
+          internal_static_RenameSnapshotRequest_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_RenameSnapshotRequest_descriptor,
+              new java.lang.String[] { "Name", "NewName", },
+              org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest.class,
+              org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotRequest.Builder.class);
+          internal_static_RenameSnapshotResponse_descriptor =
+            getDescriptor().getMessageTypes().get(45);
+          internal_static_RenameSnapshotResponse_fieldAccessorTable = new
+            com.google.protobuf.GeneratedMessage.FieldAccessorTable(
+              internal_static_RenameSnapshotResponse_descriptor,
+              new java.lang.String[] { },
+              org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse.class,
+              org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RenameSnapshotResponse.Builder.class);
+          internal_static_RestoreSnapshotRequest_descriptor =
+            getDescriptor().getMessageTypes().get(46);
           internal_static_RestoreSnapshotRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RestoreSnapshotRequest_descriptor,
@@ -22073,7 +22995,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotRequest.Builder.class);
           internal_static_RestoreSnapshotResponse_descriptor =
-            getDescriptor().getMessageTypes().get(45);
+            getDescriptor().getMessageTypes().get(47);
           internal_static_RestoreSnapshotResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_RestoreSnapshotResponse_descriptor,
@@ -22081,7 +23003,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotResponse.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.RestoreSnapshotResponse.Builder.class);
           internal_static_IsSnapshotDoneRequest_descriptor =
-            getDescriptor().getMessageTypes().get(46);
+            getDescriptor().getMessageTypes().get(48);
           internal_static_IsSnapshotDoneRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_IsSnapshotDoneRequest_descriptor,
@@ -22089,7 +23011,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneRequest.Builder.class);
           internal_static_IsSnapshotDoneResponse_descriptor =
-            getDescriptor().getMessageTypes().get(47);
+            getDescriptor().getMessageTypes().get(49);
           internal_static_IsSnapshotDoneResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_IsSnapshotDoneResponse_descriptor,
@@ -22097,7 +23019,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsSnapshotDoneResponse.Builder.class);
           internal_static_IsRestoreSnapshotDoneRequest_descriptor =
-            getDescriptor().getMessageTypes().get(48);
+            getDescriptor().getMessageTypes().get(50);
           internal_static_IsRestoreSnapshotDoneRequest_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_IsRestoreSnapshotDoneRequest_descriptor,
@@ -22105,7 +23027,7 @@ public final class MasterAdminProtos {
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneRequest.class,
               org.apache.hadoop.hbase.protobuf.generated.MasterAdminProtos.IsRestoreSnapshotDoneRequest.Builder.class);
           internal_static_IsRestoreSnapshotDoneResponse_descriptor =
-            getDescriptor().getMessageTypes().get(49);
+            getDescriptor().getMessageTypes().get(51);
           internal_static_IsRestoreSnapshotDoneResponse_fieldAccessorTable = new
             com.google.protobuf.GeneratedMessage.FieldAccessorTable(
               internal_static_IsRestoreSnapshotDoneResponse_descriptor,
