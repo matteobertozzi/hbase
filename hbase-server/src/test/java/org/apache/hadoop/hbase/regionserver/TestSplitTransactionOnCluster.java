@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HServerAddress;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.LargeTests;
 import org.apache.hadoop.hbase.MasterNotRunningException;
@@ -685,6 +686,56 @@ public class TestSplitTransactionOnCluster {
 
   }
 
+
+  @Test
+  public void testBasicSplit() throws Exception {
+
+    final String STRING_TABLE_NAME = "randTable";
+    final byte[] TEST_FAM = Bytes.toBytes("c");
+    
+    // Create a table
+    HBaseAdmin admin = TESTING_UTIL.getHBaseAdmin();
+    final long startTime = System.currentTimeMillis();
+    final String localTableNameAsString = STRING_TABLE_NAME + startTime;
+    HTable original = TESTING_UTIL.createTable(Bytes.toBytes(localTableNameAsString), TEST_FAM);
+    TESTING_UTIL.loadTable(original, TEST_FAM);
+    final int loadedTableCount = TESTING_UTIL.countRows(original);
+    System.out.println("Original table has: " + loadedTableCount + " rows");
+
+    // Verify that region information is the same pre-split
+    List<HRegionInfo> originalTableHRegions = admin.getTableRegions(Bytes
+        .toBytes(localTableNameAsString));
+    System.out.println("Original table has " + originalTableHRegions.size()
+        + " regions. ");
+    final int originalRegionCount = originalTableHRegions.size();
+
+    original.clearRegionCache();
+    
+    admin.split(originalTableHRegions.get(0).getRegionName());
+    waitOnSplit(original, originalRegionCount);
+ 
+  }
+
+  private static void waitOnSplit(final HTable t, int originalCount)
+      throws Exception {
+    Map<HRegionInfo, HServerAddress> regions = t.getRegionsInfo();
+
+    for (int i = 0; i < 45; i++) {
+      Thread.currentThread();
+      try {
+        Thread.sleep(1000);
+      } catch (InterruptedException e) {
+        e.printStackTrace();
+      }
+      regions = t.getRegionsInfo();
+      if (regions.size() > originalCount) {
+        return;
+
+      }
+    }
+    throw new Exception("Split did not increase the number of regions");
+  }
+  
   private void testSplitBeforeSettingSplittingInZKInternals() throws IOException,
       KeeperException {
     final byte[] tableName = Bytes.toBytes("testSplitBeforeSettingSplittingInZK");
