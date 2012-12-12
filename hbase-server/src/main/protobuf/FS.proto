@@ -42,3 +42,14 @@ message Reference {
   required Range range = 2;
 }
 
+message TableOperationLock {
+    required Type type = 1;
+    optional string source = 2;
+
+    enum Type {
+        CREATE_TABLE = 0;
+        DELETE_TABLE = 1;
+        RESTORE_TABLE = 2;
+        CLONE_TABLE = 3;
+    }
+}

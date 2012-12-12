@@ -42,7 +42,9 @@ import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.exception.HBaseSnapshotException;
 import org.apache.hadoop.hbase.snapshot.exception.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.exception.RestoreSnapshotException;
+import org.apache.hadoop.hbase.snapshot.restore.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -249,6 +251,19 @@ public class SnapshotManager implements Stoppable {
       LOG.error(msg, e);
       throw new RestoreSnapshotException(msg, e);
     }
+  }
+
+  /**
+   * Recover failed restore.
+   */
+  public void recoverRestoreFailure(final Path tableDir, final String snapshotName)
+      throws IOException {
+    FileSystem fs = this.master.getMasterFileSystem().getFileSystem();
+    Path rootDir = this.master.getMasterFileSystem().getRootDir();
+    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);
+    SnapshotDescription snapshot = SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir);
+    HTableDescriptor hTableDescriptor = FSTableDescriptors.getTableDescriptor(fs, snapshotDir);
+    new RestoreSnapshotHandler(master, snapshot, hTableDescriptor).process();
   }
 
   /**

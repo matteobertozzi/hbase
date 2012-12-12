@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.SnapshotSentinel;
+import org.apache.hadoop.hbase.master.TableOperationLock;
 import org.apache.hadoop.hbase.master.handler.TableEventHandler;
 import org.apache.hadoop.hbase.master.snapshot.manage.SnapshotManager;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
@@ -92,8 +93,13 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
     Path rootDir = fileSystemManager.getRootDir();
     byte[] tableName = hTableDescriptor.getName();
     Path tableDir = HTableDescriptor.getTableDir(rootDir, tableName);
+    Path lockFile = TableOperationLock.getTableOperationLockFile(tableDir);
 
     try {
+      TableOperationLock oplock = new TableOperationLock(
+        TableOperationLock.Type.RESTORE_TABLE, snapshot.getName());
+      oplock.write(fs, lockFile);
+
       // Update descriptor
       this.masterServices.getTableDescriptors().add(hTableDescriptor);
 
@@ -118,6 +124,7 @@ public class RestoreSnapshotHandler extends TableEventHandler implements Snapsho
       throw new RestoreSnapshotException(msg, e);
     } finally {
       this.stopped = true;
+      fs.delete(lockFile, false);
     }
   }
 

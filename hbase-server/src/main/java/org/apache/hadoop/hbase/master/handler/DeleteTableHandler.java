@@ -23,6 +23,8 @@ import java.util.List;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
@@ -30,8 +32,11 @@ import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
+import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.TableOperationLock;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.KeeperException;
 
@@ -58,30 +63,42 @@ public class DeleteTableHandler extends TableEventHandler {
     AssignmentManager am = this.masterServices.getAssignmentManager();
     long waitTime = server.getConfiguration().
       getLong("hbase.master.wait.on.region", 5 * 60 * 1000);
-    for (HRegionInfo region : regions) {
-      long done = System.currentTimeMillis() + waitTime;
-      while (System.currentTimeMillis() < done) {
-        if (!am.getRegionStates().isRegionInTransition(region)) break;
-        Threads.sleep(waitingTimeForEvents);
-        LOG.debug("Waiting on region to clear regions in transition; "
-          + am.getRegionStates().getRegionTransitionState(region));
+
+    MasterFileSystem masterFileSystem = this.masterServices.getMasterFileSystem();
+    FileSystem fs = masterFileSystem.getFileSystem();
+    Path tableDir = FSUtils.getTablePath(masterFileSystem.getRootDir(), tableName);
+    Path lockFile = TableOperationLock.getTableOperationLockFile(tableDir);
+    try {
+      TableOperationLock oplock = new TableOperationLock(TableOperationLock.Type.DELETE_TABLE);
+      oplock.write(fs, lockFile);
+
+      for (HRegionInfo region : regions) {
+        long done = System.currentTimeMillis() + waitTime;
+        while (System.currentTimeMillis() < done) {
+          if (!am.getRegionStates().isRegionInTransition(region)) break;
+          Threads.sleep(waitingTimeForEvents);
+          LOG.debug("Waiting on region to clear regions in transition; "
+            + am.getRegionStates().getRegionTransitionState(region));
+        }
+        if (am.getRegionStates().isRegionInTransition(region)) {
+          throw new IOException("Waited hbase.master.wait.on.region (" +
+            waitTime + "ms) for region to leave region " +
+            region.getRegionNameAsString() + " in transitions");
+        }
+        LOG.debug("Deleting region " + region.getRegionNameAsString() +
+          " from META and FS");
+        // Remove region from META
+        MetaEditor.deleteRegion(this.server.getCatalogTracker(), region);
+        // Delete region from FS
+        masterFileSystem.deleteRegion(region);
       }
-      if (am.getRegionStates().isRegionInTransition(region)) {
-        throw new IOException("Waited hbase.master.wait.on.region (" +
-          waitTime + "ms) for region to leave region " +
-          region.getRegionNameAsString() + " in transitions");
-      }
-      LOG.debug("Deleting region " + region.getRegionNameAsString() +
-        " from META and FS");
-      // Remove region from META
-      MetaEditor.deleteRegion(this.server.getCatalogTracker(), region);
-      // Delete region from FS
-      this.masterServices.getMasterFileSystem().deleteRegion(region);
+      // Delete table from FS
+      masterFileSystem.deleteTable(tableName);
+      // Update table descriptor cache
+      this.masterServices.getTableDescriptors().remove(Bytes.toString(tableName));
+    } finally {
+      fs.delete(lockFile, false);
     }
-    // Delete table from FS
-    this.masterServices.getMasterFileSystem().deleteTable(tableName);
-    // Update table descriptor cache
-    this.masterServices.getTableDescriptors().remove(Bytes.toString(tableName));
 
     // If entry for this table in zk, and up in AssignmentManager, remove it.
 

@@ -40,6 +40,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.SnapshotSentinel;
+import org.apache.hadoop.hbase.master.TableOperationLock;
 import org.apache.hadoop.hbase.master.handler.CreateTableHandler;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.server.snapshot.error.SnapshotExceptionSnare;
@@ -105,6 +106,11 @@ public class CloneSnapshotHandler extends CreateTableHandler implements Snapshot
     } finally {
       this.stopped = true;
     }
+  }
+
+  @Override
+  protected TableOperationLock createTableOperationLock() {
+    return new TableOperationLock(TableOperationLock.Type.CLONE_TABLE, snapshot.getName());
   }
 
   @Override

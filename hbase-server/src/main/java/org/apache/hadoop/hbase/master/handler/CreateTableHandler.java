@@ -25,6 +25,8 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
@@ -38,7 +40,9 @@ import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
+import org.apache.hadoop.hbase.master.TableOperationLock;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.zookeeper.KeeperException;
 
@@ -114,6 +118,7 @@ public class CreateTableHandler extends EventHandler {
   @Override
   public void process() {
     String tableName = this.hTableDescriptor.getNameAsString();
+
     try {
       LOG.info("Attempting to create the table " + tableName);
       MasterCoprocessorHost cpHost = ((HMaster) this.server).getCoprocessorHost();
@@ -133,15 +138,28 @@ public class CreateTableHandler extends EventHandler {
 
   private void handleCreateTable(String tableName) throws IOException,
       KeeperException {
-    // 1. Create table descriptor on disk
-    // TODO: Currently we make the table descriptor and as side-effect the
-    // tableDir is created.  Should we change below method to be createTable
-    // where we create table in tmp dir with its table descriptor file and then
-    // do rename to move it into place?
-    FSTableDescriptors.createTableDescriptor(this.hTableDescriptor, this.conf);
+    Path tableDir = FSUtils.getTablePath(fileSystemManager.getRootDir(), tableName);
+    Path lockFile = TableOperationLock.getTableOperationLockFile(tableDir);
+    FileSystem fs = fileSystemManager.getFileSystem();
+    List<HRegionInfo> regions;
 
-    // 2. Create regions
-    List<HRegionInfo> regions = handleCreateRegions(tableName);
+    try {
+      TableOperationLock oplock = createTableOperationLock();
+      oplock.write(fs, lockFile);
+
+      // 1. Create table descriptor on disk
+      // TODO: Currently we make the table descriptor and as side-effect the
+      // tableDir is created.  Should we change below method to be createTable
+      // where we create table in tmp dir with its table descriptor file and then
+      // do rename to move it into place?
+      FSTableDescriptors.createTableDescriptor(this.hTableDescriptor, this.conf);
+
+      // 2. Create regions
+      regions = handleCreateRegions(tableName);
+    } finally {
+      fs.delete(lockFile, false);
+    }
+
     if (regions != null && regions.size() > 0) {
       // 3. Trigger immediate assignment of the regions in round-robin fashion
       ModifyRegionUtils.assignRegions(assignmentManager, regions);
@@ -155,6 +173,10 @@ public class CreateTableHandler extends EventHandler {
       throw new IOException("Unable to ensure that the table will be" +
         " enabled because of a ZooKeeper issue", e);
     }
+  }
+
+  protected TableOperationLock createTableOperationLock() {
+    return new TableOperationLock(TableOperationLock.Type.CREATE_TABLE);
   }
 
   protected List<HRegionInfo> handleCreateRegions(String tableName) throws IOException {

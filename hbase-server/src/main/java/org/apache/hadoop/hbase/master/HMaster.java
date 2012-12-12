@@ -751,6 +751,10 @@ Server {
     status.setStatus("Fixing up missing daughters");
     fixupDaughters(status);
 
+    // Finish pending table operations
+    status.setStatus("Fixing up pending table operations");
+    fixPendingTableOperations();
+
     if (!masterRecovery) {
       // Start balancer and meta catalog janitor after meta and regions have
       // been assigned.
@@ -970,6 +974,46 @@ Server {
     if (fixups != 0) {
       LOG.info("Scanned the catalog and fixed up " + fixups +
         " missing daughter region(s)");
+    }
+  }
+
+ /**
+   * Fix the pending file-system related operations
+   *  - create table: remove the table if failed (rollback)
+   *  - delete table: finsh removing the table (rollforward)
+   *  - clone table: remove the table if failed (rollback)
+   *  - restore table: finish restoring the table (rollforward)
+   *  - snapshot: removing the tmp folder (rollback)
+   */
+  private void fixPendingTableOperations() throws IOException {
+    FileSystem fs = fileSystemManager.getFileSystem();
+
+    // fix incomplete table operations
+    for (Path tableDir: FSUtils.getTableDirs(fs, fileSystemManager.getRootDir())) {
+      Path lockFile = TableOperationLock.getTableOperationLockFile(tableDir);
+      if (!fs.exists(lockFile)) continue;
+
+      byte[] tableName = Bytes.toBytes(tableDir.getName());
+      TableOperationLock oplock = TableOperationLock.read(fs, lockFile);
+      LOG.warn("Found incomplete table operation: " + oplock);
+      switch (oplock.getType()) {
+        case CREATE_TABLE:
+        case DELETE_TABLE:
+        case CLONE_TABLE:
+          LOG.warn("Removing incomplete table=" + Bytes.toString(tableName));
+          new DisableTableHandler(this, tableName,
+            this.catalogTracker, this.assignmentManager, true).process();
+          new DeleteTableHandler(tableName, this, this).process();
+          break;
+        case RESTORE_TABLE:
+          // finish restoring the table
+          LOG.warn("Retry restore incomplete table=" + Bytes.toString(tableName));
+          snapshotManager.recoverRestoreFailure(tableDir, oplock.getSource());
+          break;
+      }
+
+      // Remove lock file
+      fs.delete(lockFile);
     }
   }
 
