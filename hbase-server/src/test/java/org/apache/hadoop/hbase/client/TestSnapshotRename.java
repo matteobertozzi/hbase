@@ -32,6 +32,7 @@ public class TestSnapshotRename {
   private static final byte[] TABLE_NAME = Bytes.toBytes(STRING_TABLE_NAME);
   private static final String firstSnapshot = "firstSnapshot";
   private static final String secondSnapshot = "secondSnapshot";
+  private static final String thirdSnapshot = "thirdSnapshot";
 
   /**
    * Setup the config for the cluster
@@ -170,5 +171,62 @@ public class TestSnapshotRename {
     List<SnapshotDescription> snapshots = SnapshotTestingUtils.assertExistsMatchingSnapshot(admin, secondSnapshot, STRING_TABLE_NAME);
     Assert.assertEquals("Incorrect number of matching snapshots", 1, snapshots.size());
     SnapshotTestingUtils.confirmSnapshotValid(snapshots.get(0), TABLE_NAME, TEST_FAM, rootDir, admin, fs, false, null, true, null);
+  }
+  
+  @Test
+  /**
+   * Verify that if a snapshot is renamed, another snapshot can be renamed to the first snapshot's original name
+   */
+  public void testRenameToRenamedSnapshot() throws Exception {
+
+    HBaseAdmin admin = UTIL.getHBaseAdmin();
+
+    FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
+    Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
+
+    //create a snapshot of the table
+    SnapshotTestingUtils.createSnapshotAndValidate(admin, STRING_TABLE_NAME, STRING_FAMILY_NAME, firstSnapshot, rootDir, fs, true);
+    admin.renameSnapshot(firstSnapshot, secondSnapshot);
+    
+    //create snapshot and then delete it
+    SnapshotTestingUtils.createSnapshotAndValidate(admin, STRING_TABLE_NAME, STRING_FAMILY_NAME, thirdSnapshot, rootDir, fs, true);
+    admin.renameSnapshot(thirdSnapshot, firstSnapshot);
+
+    //verify that all is well with that snapshot
+    List<SnapshotDescription> snapshots = SnapshotTestingUtils.assertExistsMatchingSnapshot(admin, secondSnapshot, STRING_TABLE_NAME);
+    Assert.assertEquals("Incorrect number of matching snapshots", 1, snapshots.size());
+    
+    List<SnapshotDescription> snapshots2 = SnapshotTestingUtils.assertExistsMatchingSnapshot(admin, firstSnapshot, STRING_TABLE_NAME);
+    Assert.assertEquals("Incorrect number of matching snapshots", 1, snapshots2.size());
+
+    SnapshotTestingUtils.confirmSnapshotValid(snapshots.get(0), TABLE_NAME, TEST_FAM, rootDir, admin, fs, false, null, true, null);
+    SnapshotTestingUtils.confirmSnapshotValid(snapshots2.get(0), TABLE_NAME, TEST_FAM, rootDir, admin, fs, false, null, true, null);
+  }
+  
+  @Test
+  /**
+   * Verify that special characters are allowed in the renamed snapshot name
+   */
+  public void testRenameToNameWithSpecialCharacters() throws Exception {
+    
+    final String specialCharacterMiddle = "mySn@pshot";
+    final String secondSpecialCharacterMiddle = "my#Snapshot";
+    HBaseAdmin admin = UTIL.getHBaseAdmin();
+
+    FileSystem fs = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getFileSystem();
+    Path rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
+
+    //create a snapshot of the table
+    SnapshotTestingUtils.createSnapshotAndValidate(admin, STRING_TABLE_NAME, STRING_FAMILY_NAME, firstSnapshot, rootDir, fs, true);
+    admin.renameSnapshot(firstSnapshot, specialCharacterMiddle);
+    
+    //verify that all is well with that snapshot
+    List<SnapshotDescription> snapshots = SnapshotTestingUtils.assertExistsMatchingSnapshot(admin, specialCharacterMiddle, STRING_TABLE_NAME);
+    Assert.assertEquals("Incorrect number of matching snapshots", 1, snapshots.size());
+    
+    admin.renameSnapshot(specialCharacterMiddle, secondSpecialCharacterMiddle);
+   
+    snapshots = SnapshotTestingUtils.assertExistsMatchingSnapshot(admin, secondSpecialCharacterMiddle, STRING_TABLE_NAME);
+    Assert.assertEquals("Incorrect number of matching snapshots", 1, snapshots.size());
   }
 }
