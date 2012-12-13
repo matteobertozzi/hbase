@@ -205,7 +205,7 @@ public class TestSnapshotRename {
   
   @Test
   /**
-   * Verify that special characters are allowed in the renamed snapshot name
+   * Verify that special characters are not allowed in the renamed snapshot name.
    */
   public void testRenameToNameWithSpecialCharacters() throws Exception {
     
