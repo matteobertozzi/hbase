@@ -690,7 +690,7 @@ public class TestSplitTransactionOnCluster {
   @Test
   public void testBasicSplit() throws Exception {
 
-    final String STRING_TABLE_NAME = "randTable";
+    final String STRING_TABLE_NAME = "test";
     final byte[] TEST_FAM = Bytes.toBytes("c");
     
     // Create a table
@@ -702,7 +702,13 @@ public class TestSplitTransactionOnCluster {
     final int loadedTableCount = TESTING_UTIL.countRows(original);
     System.out.println("Original table has: " + loadedTableCount + " rows");
 
-    // Verify that region information is the same pre-split
+
+    admin.disableTable(Bytes.toBytes(localTableNameAsString));
+    admin.enableTable(Bytes.toBytes(localTableNameAsString));
+    
+    admin.compact(Bytes.toBytes(localTableNameAsString));
+    Thread.sleep(2400);
+    
     List<HRegionInfo> originalTableHRegions = admin.getTableRegions(Bytes
         .toBytes(localTableNameAsString));
     System.out.println("Original table has " + originalTableHRegions.size()

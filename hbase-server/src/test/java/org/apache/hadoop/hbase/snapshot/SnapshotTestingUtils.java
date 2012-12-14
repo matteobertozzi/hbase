@@ -128,17 +128,19 @@ public class SnapshotTestingUtils {
    * Multi-family version of the confirmSnapshotValid function
    */
   public static void confirmSnapshotValid(SnapshotDescription snapshotDescriptor, byte[] tableName,
-      List<byte[]> testFamilies, Path rootDir, HBaseAdmin admin, FileSystem fs, boolean requireLogs,
-      Path logsDir, Set<String> emptyFamilies, Set<String> snapshotServers) throws IOException {
-    if (testFamilies == null) throw new IllegalArgumentException("testFamilies cannot be null");
-
-    for (byte[] testFamily : testFamilies) {
-      if(emptyFamilies.contains(Bytes.toString(testFamily))) {
+      List<byte[]> nonEmptyTestFamilies, List<byte[]> emptyTestFamilies, Path rootDir, HBaseAdmin admin, FileSystem fs, boolean requireLogs,
+      Path logsDir, Set<String> snapshotServers) throws IOException {
+    if (nonEmptyTestFamilies != null) {
+      for (byte[] testFamily : nonEmptyTestFamilies) {
         confirmSnapshotValid(snapshotDescriptor, tableName, testFamily,
-          rootDir, admin, fs, requireLogs, logsDir, true, null);
-      } else {
-         confirmSnapshotValid(snapshotDescriptor, tableName, testFamily,
-          rootDir, admin, fs, requireLogs, logsDir, false, null);
+            rootDir, admin, fs, requireLogs, logsDir, false, null);
+      }
+    }
+    
+    if (emptyTestFamilies !=null) {
+      for (byte[] testFamily : emptyTestFamilies) {
+        confirmSnapshotValid(snapshotDescriptor, tableName, testFamily,
+            rootDir, admin, fs, requireLogs, logsDir, true, null);
       }
     }
   }
@@ -359,9 +361,34 @@ public class SnapshotTestingUtils {
     return true;
   }
 
-  public static void createSnapshotAndValidate(HBaseAdmin admin, String tableNameString,
-      String familyName, String snapshotNameString, Path rootDir, FileSystem fs,
-      boolean familyEmpty) throws Exception {
+  public static void createSnapshotAndValidate(HBaseAdmin admin,
+      String tableNameString, List<byte[]> nonEmptyFamilyNames, List<byte[]> emptyFamilyNames,
+      String snapshotNameString, Path rootDir, FileSystem fs) throws Exception {
+
+    byte[] tableName = Bytes.toBytes(tableNameString);
+    try {
+      admin.disableTable(tableNameString);
+    } catch (TableNotEnabledException tne) {
+      LOG.info("In attempting to disable " + tableNameString + " it turns out that the this table is already disabled.");
+    }
+    admin.snapshot(snapshotNameString, tableNameString);
+
+    List<SnapshotDescription> snapshots = SnapshotTestingUtils.assertExistsMatchingSnapshot(admin,
+      snapshotNameString, tableNameString);
+
+    // Create test-timestamp-clone
+    if (snapshots == null || snapshots.size() != 1) {
+      Assert.fail("Incorrect number of snapshots for table " + String.valueOf(tableNameString));
+    }
+    
+    SnapshotTestingUtils.confirmSnapshotValid(snapshots.get(0), tableName, nonEmptyFamilyNames, emptyFamilyNames,
+      rootDir, admin, fs, false, new Path(rootDir, HConstants.HREGION_LOGDIR_NAME), null);
+  }
+
+  public static void createSnapshotAndValidate(HBaseAdmin admin,
+      String tableNameString, String familyName, String snapshotNameString,
+      Path rootDir, FileSystem fs, boolean familyEmpty) throws Exception {
+   
     byte[] tableName = Bytes.toBytes(tableNameString);
     try {
       admin.disableTable(tableNameString);
@@ -382,8 +409,13 @@ public class SnapshotTestingUtils {
       rootDir, admin, fs, false, new Path(rootDir, HConstants.HREGION_LOGDIR_NAME), familyEmpty, null);
   }
 
+ 
+  //Default implementation with the family not being empty
   public static void createSnapshotAndValidate(HBaseAdmin admin, String tableNameString,
       String familyName, String snapshotNameString, Path rootDir, FileSystem fs) throws Exception {
     createSnapshotAndValidate(admin, tableNameString, familyName, snapshotNameString, rootDir, fs, false);
   }
+  
+  
+  
 }
