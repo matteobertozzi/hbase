@@ -594,6 +594,7 @@ Server {
     // create the snapshot monitor
     // TODO should this be config based?
     this.snapshotManager = new SnapshotManager(this, zooKeeper, this.executorService);
+    snapshotManager.start();
   }
 
   /**
