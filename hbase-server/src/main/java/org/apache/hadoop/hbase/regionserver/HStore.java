@@ -1827,6 +1827,7 @@ public class HStore implements Store {
       long maxSize = 0L;
       StoreFile largestSf = null;
       for (StoreFile sf : storefiles) {
+        storefiles.size();
         if (sf.isReference()) {
           // Should already be enforced since we return false in this case
           assert false : "getSplitPoint() called on a region that can't split!";

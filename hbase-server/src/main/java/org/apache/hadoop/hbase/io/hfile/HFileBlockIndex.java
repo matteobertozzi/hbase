@@ -342,7 +342,7 @@ public class HFileBlockIndex {
         midKey = Arrays.copyOfRange(b.array(), keyOffset, keyOffset + keyLen);
       } else {
         // The middle of the root-level index.
-        midKey = blockKeys[(rootCount ) / 2];
+        midKey = blockKeys[rootCount / 2];
       }
 
       this.midKey.set(midKey);
