@@ -219,18 +219,20 @@ public class TestStoreFile extends HBaseTestCase {
   /**
    * Validate that we can handle valid tables with '.', '_', and '-' chars.
    */
-  public void testRefToHFileRegex() {
-    String[] legal = { "aaaa-bbbb-tablename.cccc", "aaaa-bbbb-table.with.dots.cccc",
-          "aaaa-bbbb-table-with-dashes.cccc", "aaaa-bbbb-table_with_unders.cccc",
-          "aaaa-bbbb-_table_starts_unders.cccc"};
-    for (String refToHFile : legal) {
-      LOG.info("Validating regex for '" + refToHFile + "'");
-      assertTrue(Pattern.matches(StoreFile.REF_TO_LINK_REGEX, refToHFile));
+  public void testStoreFileNames() {
+    String[] legalHFileLink = { "MyTable_02@abc012-def345", "MyTable_02.300@abc012-def345",
+      "MyTable_02-400@abc012-def345", "MyTable_02-400.200@abc012-def345" };
+    for (String name: legalHFileLink) {
+      assertTrue("should be a valid link: " + name, HFileLink.isHFileLink(name));
+
+      String refName = name + ".6789";
+      assertTrue("should be a valid link reference: " + refName, StoreFile.isReference(refName));
     }
-    
-    String[] illegal = { "aaaa-bbbb--flkaj.cccc", "aaaa-bbbb-.flkaj.cccc" };
-    for (String bad : illegal) {
-      assertFalse(Pattern.matches(StoreFile.REF_TO_LINK_REGEX, bad));
+
+    String[] illegalHFileLink = { ".MyTable_02@abc012-def345", "-MyTable_02.300@abc012-def345",
+      "MyTable_02-400@abc0_12-def345", "MyTable_02-400.200@abc012-def345...." };
+    for (String name: illegalHFileLink) {
+      assertFalse("should not be a valid link: " + name, HFileLink.isHFileLink(name));
     }
   }
 
@@ -260,7 +262,7 @@ public class TestStoreFile extends HBaseTestCase {
 
     // create link to store file. <root>/clone/region/<cf>/<hfile>-<region>-<table>
     String target = "clone";
-    Path dstPath = new Path(rootDir, new Path(new Path(target, "region"), columnFamily));
+    Path dstPath = new Path(rootDir, new Path(new Path(target, "7e0102"), columnFamily));
     HFileLink.create(conf, this.fs, dstPath, hri, storeFilePath.getName());
     Path linkFilePath = new Path(dstPath,
                   HFileLink.createHFileLinkName(hri, storeFilePath.getName()));
@@ -269,9 +271,9 @@ public class TestStoreFile extends HBaseTestCase {
     // <root>/clone/splitA/<cf>/<reftohfilelink>,
     // <root>/clone/splitB/<cf>/<reftohfilelink>
     Path splitDirA = new Path(new Path(rootDir,
-        new Path(target, "splitA")), columnFamily);
+        new Path(target, "571A")), columnFamily);
     Path splitDirB = new Path(new Path(rootDir,
-        new Path(target, "splitB")), columnFamily);
+        new Path(target, "571B")), columnFamily);
     StoreFile f = new StoreFile(fs, linkFilePath, conf, cacheConf, BloomType.NONE,
         NoOpDataBlockEncoder.INSTANCE);
     byte[] splitRow = SPLITKEY;

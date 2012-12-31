@@ -177,28 +177,32 @@ public class Reference implements Writable {
   throws IOException {
     InputStream in = fs.open(p);
     try {
-      // I need to be able to move back in the stream if this is not a pb serialization so I can
-      // do the Writable decoding instead.
-      in = in.markSupported()? in: new BufferedInputStream(in);
-      int pblen = ProtobufUtil.lengthOfPBMagic();
-      in.mark(pblen);
-      byte [] pbuf = new byte[pblen];
-      int read = in.read(pbuf);
-      if (read != pblen) throw new IOException("read=" + read + ", wanted=" + pblen);
-      // WATCHOUT! Return in middle of function!!!
-      if (ProtobufUtil.isPBMagicPrefix(pbuf)) return convert(FSProtos.Reference.parseFrom(in));
-      // Else presume Writables.  Need to reset the stream since it didn't start w/ pb.
-      // We won't bother rewriting thie Reference as a pb since Reference is transitory.
-      in.reset();
-      Reference r = new Reference();
-      DataInputStream dis = new DataInputStream(in);
-      // Set in = dis so it gets the close below in the finally on our way out.
-      in = dis;
-      r.readFields(dis);
-      return r;
+      return read(in);
     } finally {
       in.close();
     }
+  }
+
+  public static Reference read(final InputStream istream) throws IOException {
+    // I need to be able to move back in the stream if this is not a pb serialization so I can
+    // do the Writable decoding instead.
+    InputStream in = istream.markSupported() ? istream : new BufferedInputStream(istream);
+    int pblen = ProtobufUtil.lengthOfPBMagic();
+    in.mark(pblen);
+    byte [] pbuf = new byte[pblen];
+    int read = in.read(pbuf);
+    if (read != pblen) throw new IOException("read=" + read + ", wanted=" + pblen);
+    // WATCHOUT! Return in middle of function!!!
+    if (ProtobufUtil.isPBMagicPrefix(pbuf)) return convert(FSProtos.Reference.parseFrom(in));
+    // Else presume Writables.  Need to reset the stream since it didn't start w/ pb.
+    // We won't bother rewriting thie Reference as a pb since Reference is transitory.
+    in.reset();
+    Reference r = new Reference();
+    DataInputStream dis = new DataInputStream(in);
+    // Set in = dis so it gets the close below in the finally on our way out.
+    in = dis;
+    r.readFields(dis);
+    return r;
   }
 
   FSProtos.Reference convert() {

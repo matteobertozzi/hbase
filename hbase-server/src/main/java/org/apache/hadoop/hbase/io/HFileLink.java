@@ -52,9 +52,9 @@ import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 public class HFileLink extends FileLink {
   private static final Log LOG = LogFactory.getLog(HFileLink.class);
 
-  /** Define the HFile Link name pattern in the form of: hfile-region-table */
+  /** Define the HFile Link name pattern in the form of: table@region-hfile */
   public static final Pattern LINK_NAME_PARSER =
-    Pattern.compile("^([0-9a-f\\.]+)-([0-9a-f]+)-([a-zA-Z_0-9]+[a-zA-Z0-9_\\-\\.]*)$");
+    Pattern.compile("^([a-zA-Z_0-9]+[a-zA-Z0-9_\\-\\.]*)\\@([0-9a-f]+)-([0-9a-f]+)$");
 
   private final Path archivePath;
   private final Path originPath;
@@ -121,7 +121,7 @@ public class HFileLink extends FileLink {
     Matcher m = LINK_NAME_PARSER.matcher(fileName);
     if (!m.matches()) return false;
 
-    return m.groupCount() > 2 && m.group(2) != null && m.group(3) != null;
+    return m.groupCount() > 2 && m.group(3) != null && m.group(2) != null && m.group(1) != null;
   }
 
   /**
@@ -180,9 +180,9 @@ public class HFileLink extends FileLink {
     }
 
     // Convert the HFileLink name into a real table/region/cf/hfile path.
-    String hfileName = m.group(1);
+    String tableName = m.group(1);
     String regionName = m.group(2);
-    String tableName = m.group(3);
+    String hfileName = m.group(3);
     String familyName = path.getParent().getName();
     return new Path(new Path(tableName, regionName), new Path(familyName, hfileName));
   }
@@ -198,7 +198,7 @@ public class HFileLink extends FileLink {
     if (!m.matches()) {
       throw new IllegalArgumentException(fileName + " is not a valid HFileLink name!");
     }
-    return(m.group(1));
+    return(m.group(3));
   }
 
   /**
@@ -226,7 +226,7 @@ public class HFileLink extends FileLink {
     if (!m.matches()) {
       throw new IllegalArgumentException(fileName + " is not a valid HFileLink name!");
     }
-    return(m.group(3));
+    return(m.group(1));
   }
 
   /**
@@ -252,7 +252,7 @@ public class HFileLink extends FileLink {
    */
   public static String createHFileLinkName(final String tableName,
       final String regionName, final String hfileName) {
-    return String.format("%s-%s-%s", hfileName, regionName, tableName);
+    return String.format("%s@%s-%s", tableName, regionName, hfileName);
   }
 
   /**
@@ -344,7 +344,7 @@ public class HFileLink extends FileLink {
     if (!m.matches()) {
       throw new IllegalArgumentException(hfileLinkName + " is not a valid HFileLink name!");
     }
-    return create(conf, fs, dstFamilyPath, m.group(3), m.group(2), m.group(1));
+    return create(conf, fs, dstFamilyPath, m.group(1), m.group(2), m.group(3));
   }
 
   /**

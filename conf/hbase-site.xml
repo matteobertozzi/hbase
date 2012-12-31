@@ -21,4 +21,8 @@
  */
 -->
 <configuration>
+  <property>
+    <name>hbase.snapshot.enabled</name>
+    <value>true</value>
+  </property>
 </configuration>
