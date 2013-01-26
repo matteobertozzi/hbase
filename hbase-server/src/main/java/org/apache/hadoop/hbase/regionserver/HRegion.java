@@ -698,22 +698,19 @@ public class HRegion implements HeapSize { // , Writable{
    * This is a helper function to compute HDFS block distribution on demand
    * @param conf configuration
    * @param tableDescriptor HTableDescriptor of the table
-   * @param regionEncodedName encoded name of the region
+   * @param regionInfo HRegionInfo that describes the region to analyze
    * @return The HDFS blocks distribution for the given region.
- * @throws IOException
+   * @throws IOException
    */
-  static public HDFSBlocksDistribution computeHDFSBlocksDistribution(
-    Configuration conf, HTableDescriptor tableDescriptor,
-    String regionEncodedName) throws IOException {
-    HDFSBlocksDistribution hdfsBlocksDistribution =
-      new HDFSBlocksDistribution();
-    Path tablePath = FSUtils.getTablePath(FSUtils.getRootDir(conf),
-      tableDescriptor.getName());
+  public static HDFSBlocksDistribution computeHDFSBlocksDistribution(final Configuration conf,
+      final HTableDescriptor tableDescriptor, final HRegionInfo regionInfo) throws IOException {
+    HDFSBlocksDistribution hdfsBlocksDistribution = new HDFSBlocksDistribution();
+    Path tablePath = FSUtils.getTablePath(FSUtils.getRootDir(conf), tableDescriptor.getName());
     FileSystem fs = tablePath.getFileSystem(conf);
 
     for (HColumnDescriptor family: tableDescriptor.getFamilies()) {
-      Path storeHomeDir = HStore.getStoreHomedir(tablePath, regionEncodedName,
-      family.getName());
+      Path storeHomeDir = HStore.getStoreHomedir(tablePath,
+          regionInfo.getEncodedName(), family.getName());
       if (!fs.exists(storeHomeDir))continue;
 
       FileStatus[] hfilesStatus = null;
@@ -721,8 +718,7 @@ public class HRegion implements HeapSize { // , Writable{
 
       for (FileStatus hfileStatus : hfilesStatus) {
         HDFSBlocksDistribution storeFileBlocksDistribution =
-          FSUtils.computeHDFSBlocksDistribution(fs, hfileStatus, 0,
-          hfileStatus.getLen());
+          FSUtils.computeHDFSBlocksDistribution(fs, hfileStatus, 0, hfileStatus.getLen());
         hdfsBlocksDistribution.add(storeFileBlocksDistribution);
       }
     }
