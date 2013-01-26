@@ -40,9 +40,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -53,7 +51,6 @@ import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.RemoteExceptionHandler;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
@@ -111,7 +108,6 @@ public class HStore implements Store, StoreConfiguration {
 
   protected final MemStore memstore;
   // This stores directory in the filesystem.
-  private final Path homedir;
   private final HRegion region;
   private final HColumnDescriptor family;
   CompactionPolicy compactionPolicy;
@@ -145,7 +141,6 @@ public class HStore implements Store, StoreConfiguration {
   private final CopyOnWriteArraySet<ChangedReadersObserver> changedReaderObservers =
     new CopyOnWriteArraySet<ChangedReadersObserver>();
 
-  private final int blocksize;
   private HFileDataBlockEncoder dataBlockEncoder;
 
   /** Checksum configuration */
@@ -179,7 +174,7 @@ public class HStore implements Store, StoreConfiguration {
     this.fs = region.getRegionFileSystem();
 
     // Ensure it exists.
-    this.homedir = fs.createStoreDir(family.getNameAsString());
+    fs.createStoreDir(family.getNameAsString());
     this.region = region;
     this.family = family;
     // 'conf' renamed to 'confParam' b/c we use this.conf in the constructor
@@ -190,7 +185,6 @@ public class HStore implements Store, StoreConfiguration {
       .addStringMap(region.getTableDesc().getConfiguration())
       .addStringMap(family.getConfiguration())
       .addWritableMap(family.getValues());
-    this.blocksize = family.getBlocksize();
 
     this.dataBlockEncoder =
         new HFileDataBlockEncoderImpl(family.getDataBlockEncodingOnDisk(),
@@ -269,22 +263,6 @@ public class HStore implements Store, StoreConfiguration {
   @Override
   public String getTableName() {
     return this.region.getTableDesc().getNameAsString();
-  }
-
-  /**
-   * Create this store's homedir
-   * @param fs
-   * @param homedir
-   * @return Return <code>homedir</code>
-   * @throws IOException
-   */
-  Path createStoreHomeDir(final FileSystem fs,
-      final Path homedir) throws IOException {
-    if (!fs.exists(homedir)) {
-      if (!fs.mkdirs(homedir))
-        throw new IOException("Failed create of: " + homedir.toString());
-    }
-    return homedir;
   }
 
   public FileSystem getFileSystem() {
@@ -377,20 +355,11 @@ public class HStore implements Store, StoreConfiguration {
   }
 
   /**
-   * @param parentRegionDirectory directory for the parent region
-   * @param family family name of this store
-   * @return Path to the family/Store home directory
-   */
-  public static Path getStoreHomedir(final Path parentRegionDirectory,
-      final byte[] family) {
-    return new Path(parentRegionDirectory, new Path(Bytes.toString(family)));
-  }
-  /**
    * Return the directory in which this store stores its
    * StoreFiles
    */
   Path getHomedir() {
-    return homedir;
+    return fs.getStoreDir(getColumnFamilyName());
   }
 
   @Override
@@ -584,32 +553,9 @@ public class HStore implements Store, StoreConfiguration {
   @Override
   public void bulkLoadHFile(String srcPathStr, long seqNum) throws IOException {
     Path srcPath = new Path(srcPathStr);
+    Path dstPath = fs.bulkLoadStoreFile(getColumnFamilyName(), srcPath, seqNum);
 
-    FileSystem fs = this.getFileSystem();
-
-    // Copy the file if it's on another filesystem
-    FileSystem srcFs = srcPath.getFileSystem(conf);
-    FileSystem desFs = fs instanceof HFileSystem ? ((HFileSystem)fs).getBackingFs() : fs;
-    //We can't compare FileSystem instances as
-    //equals() includes UGI instance as part of the comparison
-    //and won't work when doing SecureBulkLoad
-    //TODO deal with viewFS
-    if (!srcFs.getUri().equals(desFs.getUri())) {
-      LOG.info("Bulk-load file " + srcPath + " is on different filesystem than " +
-          "the destination store. Copying file over to destination filesystem.");
-      Path tmpPath = getTmpPath();
-      FileUtil.copy(srcFs, srcPath, fs, tmpPath, false, conf);
-      LOG.info("Copied " + srcPath
-          + " to temporary path on destination filesystem: " + tmpPath);
-      srcPath = tmpPath;
-    }
-
-    Path dstPath = StoreFile.getRandomFilename(fs, homedir,
-        (seqNum == -1) ? null : "_SeqId_" + seqNum + "_");
-    LOG.debug("Renaming bulk load file " + srcPath + " to " + dstPath);
-    StoreFile.rename(fs, srcPath, dstPath);
-
-    StoreFile sf = new StoreFile(fs, dstPath, this.conf, this.cacheConf,
+    StoreFile sf = new StoreFile(this.getFileSystem(), dstPath, this.conf, this.cacheConf,
         this.family.getBloomFilterType(), this.dataBlockEncoder);
 
     StoreFile.Reader r = sf.createReader();
@@ -617,7 +563,7 @@ public class HStore implements Store, StoreConfiguration {
     this.totalUncompressedBytes += r.getTotalUncompressedBytes();
 
     LOG.info("Moved HFile " + srcPath + " into store directory " +
-        homedir + " - updating store file list.");
+        dstPath.getParent() + " - updating store file list.");
 
     // Append the new storefile into the list
     this.lock.writeLock().lock();
@@ -636,15 +582,6 @@ public class HStore implements Store, StoreConfiguration {
     notifyChangedReadersObservers();
     LOG.info("Successfully loaded store file " + srcPath
         + " into store " + this + " (new location: " + dstPath + ")");
-  }
-
-  /**
-   * Get a temporary path in this region. These temporary files
-   * will get cleaned up when the region is re-opened if they are
-   * still around.
-   */
-  private Path getTmpPath() throws IOException {
-    return StoreFile.getRandomFilename(this.getFileSystem(), region.getTmpDir());
   }
 
   @Override
@@ -885,14 +822,7 @@ public class HStore implements Store, StoreConfiguration {
       MonitoredTask status)
       throws IOException {
     // Write-out finished successfully, move into the right spot
-    String fileName = path.getName();
-    Path dstPath = new Path(homedir, fileName);
-    String msg = "Renaming flushed file at " + path + " to " + dstPath;
-    LOG.debug(msg);
-    status.setStatus("Flushing " + this + ": " + msg);
-    if (!this.getFileSystem().rename(path, dstPath)) {
-      LOG.warn("Unable to rename " + path + " to " + dstPath);
-    }
+    Path dstPath = fs.commitStoreFile(getColumnFamilyName(), path);
 
     status.setStatus("Flushing " + this + ": reopening flushed file");
     StoreFile sf = new StoreFile(this.getFileSystem(), dstPath, this.conf, this.cacheConf,
@@ -937,7 +867,7 @@ public class HStore implements Store, StoreConfiguration {
       writerCacheConf = cacheConf;
     }
     StoreFile.Writer w = new StoreFile.WriterBuilder(conf, writerCacheConf,
-        this.getFileSystem(), blocksize)
+        this.getFileSystem(), family.getBlocksize())
             .withOutputDir(region.getTmpDir())
             .withDataBlockEncoder(dataBlockEncoder)
             .withComparator(comparator)
@@ -1346,22 +1276,15 @@ public class HStore implements Store, StoreConfiguration {
    * @throws IOException
    */
   StoreFile completeCompaction(final Collection<StoreFile> compactedFiles,
-                                       final Path newFile)
-      throws IOException {
+      final Path newFile) throws IOException {
     // 1. Moving the new files into place -- if there is a new file (may not
     // be if all cells were expired or deleted).
     StoreFile result = null;
     if (newFile != null) {
       validateStoreFile(newFile);
       // Move the file into the right spot
-      Path destPath = new Path(homedir, newFile.getName());
-      LOG.info("Renaming compacted file at " + newFile + " to " + destPath);
-      if (!this.getFileSystem().rename(newFile, destPath)) {
-        LOG.error("Failed move of compacted file " + newFile + " to " +
-            destPath);
-        throw new IOException("Failed move of compacted file " + newFile +
-            " to " + destPath);
-      }
+      Path destPath = fs.commitStoreFile(getColumnFamilyName(), newFile);
+      LOG.info("Compacted file " + newFile + " moved to " + destPath);
       result = new StoreFile(this.getFileSystem(), destPath, this.conf, this.cacheConf,
           this.family.getBloomFilterType(), this.dataBlockEncoder);
       result.createReader();
@@ -1920,7 +1843,7 @@ public class HStore implements Store, StoreConfiguration {
   }
 
   public static final long FIXED_OVERHEAD =
-      ClassSize.align((20 * ClassSize.REFERENCE) + (4 * Bytes.SIZEOF_LONG)
+      ClassSize.align((19 * ClassSize.REFERENCE) + (4 * Bytes.SIZEOF_LONG)
               + (3 * Bytes.SIZEOF_INT) + Bytes.SIZEOF_BOOLEAN);
 
   public static final long DEEP_OVERHEAD = ClassSize.align(FIXED_OVERHEAD

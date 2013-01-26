@@ -698,31 +698,26 @@ public class HRegion implements HeapSize { // , Writable{
    * This is a helper function to compute HDFS block distribution on demand
    * @param conf configuration
    * @param tableDescriptor HTableDescriptor of the table
-   * @param regionEncodedName encoded name of the region
+   * @param regionInfo HRegionInfo that describes the region to analyze
    * @return The HDFS blocks distribution for the given region.
- * @throws IOException
+   * @throws IOException
    */
-  static public HDFSBlocksDistribution computeHDFSBlocksDistribution(
-    Configuration conf, HTableDescriptor tableDescriptor,
-    String regionEncodedName) throws IOException {
-    HDFSBlocksDistribution hdfsBlocksDistribution =
-      new HDFSBlocksDistribution();
-    Path tablePath = FSUtils.getTablePath(FSUtils.getRootDir(conf),
-      tableDescriptor.getName());
+  public static HDFSBlocksDistribution computeHDFSBlocksDistribution(final Configuration conf,
+      final HTableDescriptor tableDescriptor, final HRegionInfo regionInfo) throws IOException {
+    HDFSBlocksDistribution hdfsBlocksDistribution = new HDFSBlocksDistribution();
+    Path tablePath = FSUtils.getTablePath(FSUtils.getRootDir(conf), tableDescriptor.getName());
     FileSystem fs = tablePath.getFileSystem(conf);
 
+    HRegionFileSystem regionFs = new HRegionFileSystem(conf, fs, tablePath, regionInfo);
     for (HColumnDescriptor family: tableDescriptor.getFamilies()) {
-      Path storeHomeDir = HStore.getStoreHomedir(tablePath, regionEncodedName,
-      family.getName());
-      if (!fs.exists(storeHomeDir))continue;
+      Collection<HRegionFileSystem.StoreFileInfo> storeFiles =
+        regionFs.getStoreFiles(family.getNameAsString());
+      if (storeFiles == null) continue;
 
-      FileStatus[] hfilesStatus = null;
-      hfilesStatus = fs.listStatus(storeHomeDir);
-
-      for (FileStatus hfileStatus : hfilesStatus) {
+      for (HRegionFileSystem.StoreFileInfo storeFileInfo : storeFiles) {
+        FileStatus hfileStatus = storeFileInfo.getFileStatus();
         HDFSBlocksDistribution storeFileBlocksDistribution =
-          FSUtils.computeHDFSBlocksDistribution(fs, hfileStatus, 0,
-          hfileStatus.getLen());
+          FSUtils.computeHDFSBlocksDistribution(fs, hfileStatus, 0, hfileStatus.getLen());
         hdfsBlocksDistribution.add(storeFileBlocksDistribution);
       }
     }
