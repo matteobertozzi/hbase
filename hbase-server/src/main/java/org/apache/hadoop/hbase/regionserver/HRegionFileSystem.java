@@ -120,6 +120,19 @@ public class HRegionFileSystem {
     FSUtils.deleteDirectory(fs, getSplitsDir());
   }
 
+  public void createSplitsDir() throws IOException {
+    Path splitdir = getSplitsDir();
+    if (fs.exists(splitdir)) {
+      LOG.info("The " + splitdir
+          + " directory exists.  Hence deleting it to recreate it");
+      if (!fs.delete(splitdir, true)) {
+        throw new IOException("Failed deletion of " + splitdir
+            + " before creating them again.");
+      }
+    }
+    if (!fs.mkdirs(splitdir)) throw new IOException("Failed create of " + splitdir);
+  }
+
   //////////////////////////////////////////////////////////////////////////////
   // Store Files
   //////////////////////////////////////////////////////////////////////////////

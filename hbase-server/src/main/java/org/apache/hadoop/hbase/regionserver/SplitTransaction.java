@@ -150,7 +150,7 @@ public class SplitTransaction {
   public SplitTransaction(final HRegion r, final byte [] splitrow) {
     this.parent = r;
     this.splitrow = splitrow;
-    this.splitdir = getSplitDir(this.parent);
+    this.splitdir = this.parent.getRegionFileSystem().getSplitsDir();
   }
 
   /**
@@ -262,7 +262,7 @@ public class SplitTransaction {
       }
     }
 
-    createSplitDir(this.parent.getFilesystem(), this.splitdir);
+    this.parent.getRegionFileSystem().createSplitsDir();
     this.journal.add(JournalEntry.CREATE_SPLIT_DIR);
 
     List<StoreFile> hstoreFilesToSplit = null;
@@ -545,56 +545,8 @@ public class SplitTransaction {
     }
   }
 
-  private static Path getSplitDir(final HRegion r) {
-    return new Path(r.getRegionDir(), HRegionFileSystem.REGION_SPLITS_DIR);
-  }
-
-  /**
-   * @param fs Filesystem to use
-   * @param splitdir Directory to store temporary split data in
-   * @throws IOException If <code>splitdir</code> already exists or we fail
-   * to create it.
-   * @see #cleanupSplitDir(FileSystem, Path)
-   */
-  private static void createSplitDir(final FileSystem fs, final Path splitdir)
-  throws IOException {
-    if (fs.exists(splitdir)) {
-      LOG.info("The " + splitdir
-          + " directory exists.  Hence deleting it to recreate it");
-      if (!fs.delete(splitdir, true)) {
-        throw new IOException("Failed deletion of " + splitdir
-            + " before creating them again.");
-      }
-    }
-    if (!fs.mkdirs(splitdir)) throw new IOException("Failed create of " + splitdir);
-  }
-
-  private static void cleanupSplitDir(final FileSystem fs, final Path splitdir)
-  throws IOException {
-    // Splitdir may have been cleaned up by reopen of the parent dir.
-    deleteDir(fs, splitdir, false);
-  }
-
-  /**
-   * @param fs Filesystem to use
-   * @param dir Directory to delete
-   * @param mustPreExist If true, we'll throw exception if <code>dir</code>
-   * does not preexist, else we'll just pass.
-   * @throws IOException Thrown if we fail to delete passed <code>dir</code>
-   */
-  private static void deleteDir(final FileSystem fs, final Path dir,
-      final boolean mustPreExist)
-  throws IOException {
-    if (!fs.exists(dir)) {
-      if (mustPreExist) throw new IOException(dir.toString() + " does not exist!");
-    } else if (!fs.delete(dir, true)) {
-      throw new IOException("Failed delete of " + dir);
-    }
-  }
-
-  private void splitStoreFiles(final Path splitdir,
-    final List<StoreFile> hstoreFilesToSplit)
-  throws IOException {
+  private void splitStoreFiles(final Path splitdir, final List<StoreFile> hstoreFilesToSplit)
+      throws IOException {
     if (hstoreFilesToSplit == null) {
       // Could be null because close didn't succeed -- for now consider it fatal
       throw new IOException("Close returned empty list of StoreFiles");
@@ -668,7 +620,6 @@ public class SplitTransaction {
    * in parallel instead of sequentially.
    */
   class StoreFileSplitter implements Callable<Void> {
-
     private final StoreFile sf;
     private final Path splitdir;
 
@@ -715,8 +666,9 @@ public class SplitTransaction {
     final Path tabledir, final String encodedName)
   throws IOException {
     Path regiondir = HRegion.getRegionDir(tabledir, encodedName);
-    // Dir may not preexist.
-    deleteDir(fs, regiondir, false);
+    if (!FSUtils.deleteDirectory(fs, regiondir)) {
+      throw new IOException("Failed delete of " + regiondir);
+    }
   }
 
   /*
@@ -764,8 +716,8 @@ public class SplitTransaction {
         break;
 
       case CREATE_SPLIT_DIR:
-    	this.parent.writestate.writesEnabled = true;
-        cleanupSplitDir(fs, this.splitdir);
+        this.parent.writestate.writesEnabled = true;
+        this.parent.getRegionFileSystem().cleanupSplitsDir();
         break;
 
       case CLOSED_PARENT_REGION:
@@ -837,7 +789,7 @@ public class SplitTransaction {
    * @throws IOException
    */
   static void cleanupAnySplitDetritus(final HRegion r) throws IOException {
-    Path splitdir = getSplitDir(r);
+    Path splitdir = r.getRegionFileSystem().getSplitsDir();
     FileSystem fs = r.getFilesystem();
     if (!fs.exists(splitdir)) return;
     // Look at the splitdir.  It could have the encoded names of the daughter
@@ -849,10 +801,9 @@ public class SplitTransaction {
     // dir in the filesystem.  TOOD: Fix.
     FileStatus [] daughters = fs.listStatus(splitdir, new FSUtils.DirFilter(fs));
     for (int i = 0; i < daughters.length; i++) {
-      cleanupDaughterRegion(fs, r.getTableDir(),
-        daughters[i].getPath().getName());
+      cleanupDaughterRegion(fs, r.getTableDir(), daughters[i].getPath().getName());
     }
-    cleanupSplitDir(r.getFilesystem(), splitdir);
+    r.getRegionFileSystem().cleanupSplitsDir();
     LOG.info("Cleaned up old failed split transaction detritus: " + splitdir);
   }
 

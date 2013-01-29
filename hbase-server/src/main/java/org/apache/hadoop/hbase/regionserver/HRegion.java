@@ -213,12 +213,6 @@ public class HRegion implements HeapSize { // , Writable{
   // TODO: account for each registered handler in HeapSize computation
   private Map<String, Service> coprocessorServiceHandlers = Maps.newHashMap();
 
-  //These variable are just used for getting data out of the region, to test on
-  //client side
-  // private int numStores = 0;
-  // private int [] storeSize = null;
-  // private byte [] name = null;
-
   public final AtomicLong memstoreSize = new AtomicLong(0);
 
   // Debug possible data loss due to WAL off
@@ -2638,7 +2632,7 @@ public class HRegion implements HeapSize { // , Writable{
     }
     long seqid = minSeqIdForTheRegion;
 
-    FileSystem fs = this.getFilesystem();
+    FileSystem fs = this.fs.getFileSystem();
     NavigableSet<Path> files = HLogUtil.getSplitEditFilesSorted(fs, regiondir);
     if (files == null || files.isEmpty()) return seqid;
 
@@ -2719,7 +2713,7 @@ public class HRegion implements HeapSize { // , Writable{
     LOG.info(msg);
     MonitoredTask status = TaskMonitor.get().createStatus(msg);
 
-    FileSystem fs = this.getFilesystem();
+    FileSystem fs = this.fs.getFileSystem();
     status.setStatus("Opening logs");
     HLog.Reader reader = null;
     try {
@@ -4143,9 +4137,8 @@ public class HRegion implements HeapSize { // , Writable{
       // HStoreFiles per family and there will be no reference store
       List<StoreFile> srcFiles = es.getValue();
       for (StoreFile hsf: srcFiles) {
-        StoreFile.rename(fs, hsf.getPath(),
-          StoreFile.getUniqueFile(fs, HStore.getStoreHomedir(tableDir,
-            newRegionInfo.getEncodedName(), colFamily)));
+        fs.rename(hsf.getPath(), StoreFile.getUniqueFile(fs,
+            HStore.getStoreHomedir(tableDir, newRegionInfo.getEncodedName(), colFamily)));
       }
     }
     if (LOG.isDebugEnabled()) {
