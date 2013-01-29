@@ -690,28 +690,6 @@ public class StoreFile {
     return sb.toString();
   }
 
-  /**
-   * Utility to help with rename.
-   * @param fs
-   * @param src
-   * @param tgt
-   * @return True if succeeded.
-   * @throws IOException
-   */
-  public static Path rename(final FileSystem fs,
-                            final Path src,
-                            final Path tgt)
-      throws IOException {
-
-    if (!fs.exists(src)) {
-      throw new FileNotFoundException(src.toString());
-    }
-    if (!fs.rename(src, tgt)) {
-      throw new IOException("Failed rename of " + src + " to " + tgt);
-    }
-    return tgt;
-  }
-
   public static class WriterBuilder {
     private final Configuration conf;
     private final CacheConfig cacheConf;
