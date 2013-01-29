@@ -662,10 +662,9 @@ public class SplitTransaction {
     return r;
   }
 
-  private static void cleanupDaughterRegion(final FileSystem fs,
-    final Path tabledir, final String encodedName)
-  throws IOException {
-    Path regiondir = HRegion.getRegionDir(tabledir, encodedName);
+  private static void cleanupDaughterRegion(final FileSystem fs, final Path tabledir,
+      final HRegionInfo regionInfo) throws IOException {
+    Path regiondir = HRegion.getRegionDir(tabledir, regionInfo.getEncodedName());
     if (!FSUtils.deleteDirectory(fs, regiondir)) {
       throw new IOException("Failed delete of " + regiondir);
     }
@@ -736,13 +735,11 @@ public class SplitTransaction {
         break;
 
       case STARTED_REGION_A_CREATION:
-        cleanupDaughterRegion(fs, this.parent.getTableDir(),
-          this.hri_a.getEncodedName());
+        cleanupDaughterRegion(fs, this.parent.getTableDir(), this.hri_a);
         break;
 
       case STARTED_REGION_B_CREATION:
-        cleanupDaughterRegion(fs, this.parent.getTableDir(),
-          this.hri_b.getEncodedName());
+        cleanupDaughterRegion(fs, this.parent.getTableDir(), this.hri_b);
         break;
 
       case OFFLINED_PARENT:
@@ -778,33 +775,6 @@ public class SplitTransaction {
   // For unit testing.
   Path getSplitDir() {
     return this.splitdir;
-  }
-
-  /**
-   * Clean up any split detritus that may have been left around from previous
-   * split attempts.
-   * Call this method on initial region deploy.  Cleans up any mess
-   * left by previous deploys of passed <code>r</code> region.
-   * @param r
-   * @throws IOException
-   */
-  static void cleanupAnySplitDetritus(final HRegion r) throws IOException {
-    Path splitdir = r.getRegionFileSystem().getSplitsDir();
-    FileSystem fs = r.getFilesystem();
-    if (!fs.exists(splitdir)) return;
-    // Look at the splitdir.  It could have the encoded names of the daughter
-    // regions we tried to make.  See if the daughter regions actually got made
-    // out under the tabledir.  If here under splitdir still, then the split did
-    // not complete.  Try and do cleanup.  This code WILL NOT catch the case
-    // where we successfully created daughter a but regionserver crashed during
-    // the creation of region b.  In this case, there'll be an orphan daughter
-    // dir in the filesystem.  TOOD: Fix.
-    FileStatus [] daughters = fs.listStatus(splitdir, new FSUtils.DirFilter(fs));
-    for (int i = 0; i < daughters.length; i++) {
-      cleanupDaughterRegion(fs, r.getTableDir(), daughters[i].getPath().getName());
-    }
-    r.getRegionFileSystem().cleanupSplitsDir();
-    LOG.info("Cleaned up old failed split transaction detritus: " + splitdir);
   }
 
   private static void cleanZK(final Server server, final HRegionInfo hri) {
