@@ -116,8 +116,55 @@ public class HRegionFileSystem {
     FSUtils.deleteDirectory(fs, getMergesDir());
   }
 
+  //////////////////////////////////////////////////////////////////////////////
+  // Splits
+  //////////////////////////////////////////////////////////////////////////////
   public void cleanupSplitsDir() throws IOException {
     FSUtils.deleteDirectory(fs, getSplitsDir());
+  }
+
+  /**
+   * Clean up any split detritus that may have been left around from previous
+   * split attempts.
+   * Call this method on initial region deploy.  Cleans up any mess
+   * left by previous deploys of passed <code>r</code> region.
+   * @param r
+   * @throws IOException
+   */
+  public void cleanupAnySplitDetritus() throws IOException {
+    Path splitdir = this.getSplitsDir();
+    if (!fs.exists(splitdir)) return;
+    // Look at the splitdir.  It could have the encoded names of the daughter
+    // regions we tried to make.  See if the daughter regions actually got made
+    // out under the tabledir.  If here under splitdir still, then the split did
+    // not complete.  Try and do cleanup.  This code WILL NOT catch the case
+    // where we successfully created daughter a but regionserver crashed during
+    // the creation of region b.  In this case, there'll be an orphan daughter
+    // dir in the filesystem.  TOOD: Fix.
+    FileStatus[] daughters = FSUtils.listStatus(fs, splitdir, new FSUtils.DirFilter(fs));
+    if (daughters != null) {
+      for (FileStatus daughter: daughters) {
+        Path daughterDir = new Path(getTableDir(), daughter.getPath().getName());
+        if (fs.exists(daughterDir) && !fs.delete(daughterDir, true)) {
+          throw new IOException("Failed delete of " + daughterDir);
+        }
+      }
+    }
+    cleanupSplitsDir();
+    LOG.info("Cleaned up old failed split transaction detritus: " + splitdir);
+  }
+
+  public void createSplitsDir() throws IOException {
+    Path splitdir = getSplitsDir();
+    if (fs.exists(splitdir)) {
+      LOG.info("The " + splitdir
+          + " directory exists.  Hence deleting it to recreate it");
+      if (!fs.delete(splitdir, true)) {
+        throw new IOException("Failed deletion of " + splitdir
+            + " before creating them again.");
+      }
+    }
+    if (!fs.mkdirs(splitdir)) throw new IOException("Failed create of " + splitdir);
   }
 
   //////////////////////////////////////////////////////////////////////////////

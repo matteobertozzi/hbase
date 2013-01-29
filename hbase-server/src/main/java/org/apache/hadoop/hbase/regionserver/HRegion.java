@@ -213,12 +213,6 @@ public class HRegion implements HeapSize { // , Writable{
   // TODO: account for each registered handler in HeapSize computation
   private Map<String, Service> coprocessorServiceHandlers = Maps.newHashMap();
 
-  //These variable are just used for getting data out of the region, to test on
-  //client side
-  // private int numStores = 0;
-  // private int [] storeSize = null;
-  // private byte [] name = null;
-
   public final AtomicLong memstoreSize = new AtomicLong(0);
 
   // Debug possible data loss due to WAL off
@@ -265,7 +259,7 @@ public class HRegion implements HeapSize { // , Writable{
   static final long DEFAULT_ROW_PROCESSOR_TIMEOUT = 60 * 1000L;
   final ExecutorService rowProcessorExecutor = Executors.newCachedThreadPool();
 
-  KeyValue.KVComparator comparator;
+  final KeyValue.KVComparator comparator;
 
   private final ConcurrentHashMap<RegionScanner, Long> scannerReadPoints;
 
@@ -378,8 +372,8 @@ public class HRegion implements HeapSize { // , Writable{
    * @param other original object
    */
   public HRegion(HRegion other) {
-    this(other.getTableDir(), other.getLog(), other.getFilesystem(),
-        other.baseConf, other.getRegionInfo(), other.getTableDesc(), null);
+    this(other.getRegionFileSystem(), other.getLog(), other.getBaseConf(),
+        other.getTableDesc(), null);
   }
 
   /**
@@ -409,11 +403,10 @@ public class HRegion implements HeapSize { // , Writable{
       final Configuration confParam, final HRegionInfo regionInfo,
       final HTableDescriptor htd, final RegionServerServices rsServices) {
     this(new HRegionFileSystem(confParam, fs, tableDir, regionInfo),
-      log, confParam, regionInfo, htd, rsServices);
+      log, confParam, htd, rsServices);
   }
 
-  public HRegion(final HRegionFileSystem fs, final HLog log,
-      final Configuration confParam, final HRegionInfo regionInfo,
+  public HRegion(final HRegionFileSystem fs, final HLog log, final Configuration confParam,
       final HTableDescriptor htd, final RegionServerServices rsServices) {
     if (htd == null) {
       throw new IllegalArgumentException("Need table descriptor");
@@ -422,7 +415,7 @@ public class HRegion implements HeapSize { // , Writable{
       throw new IllegalArgumentException("Need original base configuration");
     }
 
-    this.comparator = regionInfo.getComparator();
+    this.comparator = fs.getRegionInfo().getComparator();
     this.log = log;
     this.fs = fs;
 
@@ -440,7 +433,7 @@ public class HRegion implements HeapSize { // , Writable{
     this.rsServices = rsServices;
     this.threadWakeFrequency = conf.getLong(HConstants.THREAD_WAKE_FREQUENCY,
         10 * 1000);
-    String encodedNameStr = this.getRegionInfo().getEncodedName();
+    String encodedNameStr = fs.getRegionInfo().getEncodedName();
     setHTableSpecificConf();
     this.scannerReadPoints = new ConcurrentHashMap<RegionScanner, Long>();
 
@@ -616,8 +609,7 @@ public class HRegion implements HeapSize { // , Writable{
     // Get rid of any splits or merges that were lost in-progress.  Clean out
     // these directories here on open.  We may be opening a region that was
     // being split but we crashed in the middle of it all.
-    SplitTransaction.cleanupAnySplitDetritus(this);
-    fs.cleanupSplitsDir();
+    fs.cleanupAnySplitDetritus();
     this.writestate.setReadOnly(this.htableDescriptor.isReadOnly());
 
     this.writestate.flushRequested = false;
@@ -2637,7 +2629,7 @@ public class HRegion implements HeapSize { // , Writable{
     }
     long seqid = minSeqIdForTheRegion;
 
-    FileSystem fs = this.getFilesystem();
+    FileSystem fs = this.fs.getFileSystem();
     NavigableSet<Path> files = HLogUtil.getSplitEditFilesSorted(fs, regiondir);
     if (files == null || files.isEmpty()) return seqid;
 
@@ -2718,7 +2710,7 @@ public class HRegion implements HeapSize { // , Writable{
     LOG.info(msg);
     MonitoredTask status = TaskMonitor.get().createStatus(msg);
 
-    FileSystem fs = this.getFilesystem();
+    FileSystem fs = this.fs.getFileSystem();
     status.setStatus("Opening logs");
     HLog.Reader reader = null;
     try {
@@ -4142,9 +4134,8 @@ public class HRegion implements HeapSize { // , Writable{
       // HStoreFiles per family and there will be no reference store
       List<StoreFile> srcFiles = es.getValue();
       for (StoreFile hsf: srcFiles) {
-        StoreFile.rename(fs, hsf.getPath(),
-          StoreFile.getUniqueFile(fs, HStore.getStoreHomedir(tableDir,
-            newRegionInfo.getEncodedName(), colFamily)));
+        fs.rename(hsf.getPath(), StoreFile.getUniqueFile(fs,
+            HStore.getStoreHomedir(tableDir, newRegionInfo.getEncodedName(), colFamily)));
       }
     }
     if (LOG.isDebugEnabled()) {
