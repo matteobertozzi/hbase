@@ -67,7 +67,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.exceptions.DroppedSnapshotException;
 import org.apache.hadoop.hbase.exceptions.FailedSanityCheckException;
@@ -85,7 +84,6 @@ import org.apache.hadoop.hbase.exceptions.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.exceptions.NotServingRegionException;
 import org.apache.hadoop.hbase.exceptions.RegionTooBusyException;
 import org.apache.hadoop.hbase.exceptions.UnknownScannerException;
-import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
@@ -219,12 +217,6 @@ public class HRegion implements HeapSize { // , Writable{
 
   // TODO: account for each registered handler in HeapSize computation
   private Map<String, Service> coprocessorServiceHandlers = Maps.newHashMap();
-
-  //These variable are just used for getting data out of the region, to test on
-  //client side
-  // private int numStores = 0;
-  // private int [] storeSize = null;
-  // private byte [] name = null;
 
   public final AtomicLong memstoreSize = new AtomicLong(0);
 
@@ -578,7 +570,7 @@ public class HRegion implements HeapSize { // , Writable{
     // Get rid of any splits or merges that were lost in-progress.  Clean out
     // these directories here on open.  We may be opening a region that was
     // being split but we crashed in the middle of it all.
-    SplitTransaction.cleanupAnySplitDetritus(this);
+    fs.cleanupAnySplitDetritus();
     fs.cleanupMergesDir();
 
     this.writestate.setReadOnly(this.htableDescriptor.isReadOnly());
@@ -821,7 +813,7 @@ public class HRegion implements HeapSize { // , Writable{
    *
    * @throws IOException e
    */
-  public List<StoreFile> close() throws IOException {
+  public Map<byte[], List<StoreFile>> close() throws IOException {
     return close(false);
   }
 
@@ -841,7 +833,7 @@ public class HRegion implements HeapSize { // , Writable{
    *
    * @throws IOException e
    */
-  public List<StoreFile> close(final boolean abort) throws IOException {
+  public Map<byte[], List<StoreFile>> close(final boolean abort) throws IOException {
     // Only allow one thread to close at a time. Serialize them so dual
     // threads attempting to close will run up against each other.
     MonitoredTask status = TaskMonitor.get().createStatus(
@@ -858,9 +850,8 @@ public class HRegion implements HeapSize { // , Writable{
     }
   }
 
-  private List<StoreFile> doClose(
-      final boolean abort, MonitoredTask status)
-  throws IOException {
+  private Map<byte[], List<StoreFile>> doClose(final boolean abort, MonitoredTask status)
+      throws IOException {
     if (isClosed()) {
       LOG.warn("Region " + this + " already closed");
       return null;
@@ -906,28 +897,35 @@ public class HRegion implements HeapSize { // , Writable{
         internalFlushcache(status);
       }
 
-      List<StoreFile> result = new ArrayList<StoreFile>();
+      Map<byte[], List<StoreFile>> result =
+        new TreeMap<byte[], List<StoreFile>>(Bytes.BYTES_COMPARATOR);
       if (!stores.isEmpty()) {
         // initialize the thread pool for closing stores in parallel.
         ThreadPoolExecutor storeCloserThreadPool =
           getStoreOpenAndCloseThreadPool("StoreCloserThread-" + this.getRegionNameAsString());
-        CompletionService<Collection<StoreFile>> completionService =
-          new ExecutorCompletionService<Collection<StoreFile>>(storeCloserThreadPool);
+        CompletionService<Pair<byte[], Collection<StoreFile>>> completionService =
+          new ExecutorCompletionService<Pair<byte[], Collection<StoreFile>>>(storeCloserThreadPool);
 
         // close each store in parallel
         for (final Store store : stores.values()) {
           completionService
-              .submit(new Callable<Collection<StoreFile>>() {
-                public Collection<StoreFile> call() throws IOException {
-                  return store.close();
+              .submit(new Callable<Pair<byte[], Collection<StoreFile>>>() {
+                public Pair<byte[], Collection<StoreFile>> call() throws IOException {
+                  return new Pair<byte[], Collection<StoreFile>>(
+                    store.getFamily().getName(), store.close());
                 }
               });
         }
         try {
           for (int i = 0; i < stores.size(); i++) {
-            Future<Collection<StoreFile>> future = completionService.take();
-            Collection<StoreFile> storeFileList = future.get();
-            result.addAll(storeFileList);
+            Future<Pair<byte[], Collection<StoreFile>>> future = completionService.take();
+            Pair<byte[], Collection<StoreFile>> storeFiles = future.get();
+            List<StoreFile> familyFiles = result.get(storeFiles.getFirst());
+            if (familyFiles == null) {
+              familyFiles = new ArrayList<StoreFile>();
+              result.put(storeFiles.getFirst(), familyFiles);
+            }
+            familyFiles.addAll(storeFiles.getSecond());
           }
         } catch (InterruptedException e) {
           throw new IOException(e);
@@ -4056,12 +4054,12 @@ public class HRegion implements HeapSize { // , Writable{
   /**
    * Create a daughter region from given a temp directory with the region data.
    * @param hri Spec. for daughter region to open.
-   * @param daughterTmpDir Directory that contains region files.
    * @throws IOException
    */
-  HRegion createDaughterRegion(final HRegionInfo hri, final Path daughterTmpDir)
+  HRegion createDaughterRegionFromSplits(final HRegionInfo hri)
       throws IOException {
     FileSystem fs = this.fs.getFileSystem();
+    Path daughterTmpDir = this.fs.getSplitsDir(hri);
     HRegion r = HRegion.newHRegion(this.getTableDir(), this.getLog(), fs,
         this.getBaseConf(), hri, this.getTableDesc(), rsServices);
     r.readRequestsCount.set(this.getReadRequestsCount() / 2);
@@ -4201,8 +4199,7 @@ public class HRegion implements HeapSize { // , Writable{
    * @return new merged region
    * @throws IOException
    */
-  public static HRegion merge(HRegion a, HRegion b)
-  throws IOException {
+  public static HRegion merge(final HRegion a, final HRegion b) throws IOException {
     if (!a.getRegionInfo().getTableNameAsString().equals(
         b.getRegionInfo().getTableNameAsString())) {
       throw new IOException("Regions do not belong to the same table");
@@ -4211,12 +4208,10 @@ public class HRegion implements HeapSize { // , Writable{
     FileSystem fs = a.getFilesystem();
 
     // Make sure each region's cache is empty
-
     a.flushcache();
     b.flushcache();
 
     // Compact each region so we only have one store file per family
-
     a.compactStores(true);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Files for region: " + a);
@@ -4232,6 +4227,7 @@ public class HRegion implements HeapSize { // , Writable{
     HTableDescriptor tabledesc = a.getTableDesc();
     HLog log = a.getLog();
     Path tableDir = a.getTableDir();
+
     // Presume both are of same region type -- i.e. both user or catalog
     // table regions.  This way can use comparator.
     final byte[] startKey =
@@ -4257,41 +4253,44 @@ public class HRegion implements HeapSize { // , Writable{
          ? b.getEndKey()
          : a.getEndKey());
 
-    HRegionInfo newRegionInfo =
-        new HRegionInfo(tabledesc.getName(), startKey, endKey);
-    LOG.info("Creating new region " + newRegionInfo.toString());
-    String encodedName = newRegionInfo.getEncodedName();
-    Path newRegionDir = HRegion.getRegionDir(a.getTableDir(), encodedName);
-    if(fs.exists(newRegionDir)) {
-      throw new IOException("Cannot merge; target file collision at " +
-          newRegionDir);
-    }
-    fs.mkdirs(newRegionDir);
+    HRegionInfo newRegionInfo = new HRegionInfo(tabledesc.getName(), startKey, endKey);
+
+    LOG.info("Creating new region " + newRegionInfo);
+    HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(
+        conf, fs, tableDir, newRegionInfo);
 
     LOG.info("starting merge of regions: " + a + " and " + b +
       " into new region " + newRegionInfo.toString() +
         " with start key <" + Bytes.toStringBinary(startKey) + "> and end key <" +
         Bytes.toStringBinary(endKey) + ">");
 
-    // Move HStoreFiles under new region directory
-    Map<byte [], List<StoreFile>> byFamily =
-      new TreeMap<byte [], List<StoreFile>>(Bytes.BYTES_COMPARATOR);
-    byFamily = filesByFamily(byFamily, a.close());
-    byFamily = filesByFamily(byFamily, b.close());
-    for (Map.Entry<byte [], List<StoreFile>> es : byFamily.entrySet()) {
-      byte [] colFamily = es.getKey();
-      Path storeDir = makeColumnFamilyDirs(fs, tableDir, newRegionInfo, colFamily);
-      // Because we compacted the source regions we should have no more than two
-      // HStoreFiles per family and there will be no reference store
-      List<StoreFile> srcFiles = es.getValue();
-      for (StoreFile hsf: srcFiles) {
-        StoreFile.rename(fs, hsf.getPath(), StoreFile.getUniqueFile(fs, storeDir));
+    // Because we compacted the source regions we should have no more than two
+    // StoreFiles per family and there will be no reference store
+    Map<byte[], List<StoreFile>> aStoreFiles = a.close();
+    Map<byte[], List<StoreFile>> bStoreFiles = b.close();
+
+    // Move StoreFiles of Region 'A' under new region directory
+    for (Map.Entry<byte[], List<StoreFile>> es: aStoreFiles.entrySet()) {
+      String familyName = Bytes.toString(es.getKey());
+      for (StoreFile sf: es.getValue()) {
+        regionFs.commitStoreFile(familyName, sf.getPath());
       }
     }
+
+    // Move StoreFiles of Region 'B' under new region directory
+    for (Map.Entry<byte[], List<StoreFile>> es: bStoreFiles.entrySet()) {
+      String familyName = Bytes.toString(es.getKey());
+      for (StoreFile sf: es.getValue()) {
+        regionFs.commitStoreFile(familyName, sf.getPath());
+      }
+    }
+
     if (LOG.isDebugEnabled()) {
       LOG.debug("Files for new region");
-      FSUtils.logFileSystemState(fs, newRegionDir, LOG);
+      FSUtils.logFileSystemState(fs, regionFs.getRegionDir(), LOG);
     }
+
+    // Create HRegion and update the metrics
     HRegion dstRegion = HRegion.newHRegion(tableDir, log, fs, conf,
         newRegionInfo, a.getTableDesc(), null);
     dstRegion.readRequestsCount.set(a.readRequestsCount.get() + b.readRequestsCount.get());
@@ -4302,42 +4301,21 @@ public class HRegion implements HeapSize { // , Writable{
       a.checkAndMutateChecksPassed.get() + b.checkAndMutateChecksPassed.get());
     dstRegion.initialize();
     dstRegion.compactStores();
+
     if (LOG.isDebugEnabled()) {
       LOG.debug("Files for new region");
       FSUtils.logFileSystemState(fs, dstRegion.getRegionDir(), LOG);
     }
 
     // delete out the 'A' region
-    HFileArchiver.archiveRegion(fs,
-      FSUtils.getRootDir(a.getBaseConf()), a.getTableDir(), a.getRegionDir());
+    HRegionFileSystem.deleteRegionFromFileSystem(
+      a.getBaseConf(), fs, a.getTableDir(), a.getRegionInfo());
     // delete out the 'B' region
-    HFileArchiver.archiveRegion(fs,
-      FSUtils.getRootDir(b.getBaseConf()), b.getTableDir(), b.getRegionDir());
+    HRegionFileSystem.deleteRegionFromFileSystem(
+      b.getBaseConf(), fs, b.getTableDir(), b.getRegionInfo());
 
     LOG.info("merge completed. New region is " + dstRegion);
-
     return dstRegion;
-  }
-
-  /*
-   * Fills a map with a vector of store files keyed by column family.
-   * @param byFamily Map to fill.
-   * @param storeFiles Store files to process.
-   * @param family
-   * @return Returns <code>byFamily</code>
-   */
-  private static Map<byte [], List<StoreFile>> filesByFamily(
-      Map<byte [], List<StoreFile>> byFamily, List<StoreFile> storeFiles) {
-    for (StoreFile src: storeFiles) {
-      byte [] family = src.getFamily();
-      List<StoreFile> v = byFamily.get(family);
-      if (v == null) {
-        v = new ArrayList<StoreFile>();
-        byFamily.put(family, v);
-      }
-      v.add(src);
-    }
-    return byFamily;
   }
 
   /**

@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 
@@ -335,11 +336,106 @@ public class HRegionFileSystem {
     return new Path(getRegionDir(), REGION_SPLITS_DIR);
   }
 
+  public Path getSplitsDir(final HRegionInfo hri) {
+    return new Path(getSplitsDir(), hri.getEncodedName());
+  }
+
   /**
    * Clean up any split detritus that may have been left around from previous split attempts.
    */
   public void cleanupSplitsDir() throws IOException {
     FSUtils.deleteDirectory(fs, getSplitsDir());
+  }
+
+  /**
+   * Clean up any split detritus that may have been left around from previous
+   * split attempts.
+   * Call this method on initial region deploy.
+   * @throws IOException
+   */
+  public void cleanupAnySplitDetritus() throws IOException {
+    Path splitdir = this.getSplitsDir();
+    if (!fs.exists(splitdir)) return;
+    // Look at the splitdir.  It could have the encoded names of the daughter
+    // regions we tried to make.  See if the daughter regions actually got made
+    // out under the tabledir.  If here under splitdir still, then the split did
+    // not complete.  Try and do cleanup.  This code WILL NOT catch the case
+    // where we successfully created daughter a but regionserver crashed during
+    // the creation of region b.  In this case, there'll be an orphan daughter
+    // dir in the filesystem.  TOOD: Fix.
+    FileStatus[] daughters = FSUtils.listStatus(fs, splitdir, new FSUtils.DirFilter(fs));
+    if (daughters != null) {
+      for (FileStatus daughter: daughters) {
+        Path daughterDir = new Path(getTableDir(), daughter.getPath().getName());
+        if (fs.exists(daughterDir) && !fs.delete(daughterDir, true)) {
+          throw new IOException("Failed delete of " + daughterDir);
+        }
+      }
+    }
+    cleanupSplitsDir();
+    LOG.info("Cleaned up old failed split transaction detritus: " + splitdir);
+  }
+
+  /**
+   * Remove daughter region
+   * @param regionInfo daughter {@link HRegionInfo}
+   * @throws IOException
+   */
+  public void cleanupDaughterRegion(final HRegionInfo regionInfo) throws IOException {
+    Path regionDir = new Path(this.tableDir, regionInfo.getEncodedName());
+    if (this.fs.exists(regionDir) && !this.fs.delete(regionDir, true)) {
+      throw new IOException("Failed delete of " + regionDir);
+    }
+  }
+
+  /**
+   * Create the region splits directory.
+   */
+  public void createSplitsDir() throws IOException {
+    Path splitdir = getSplitsDir();
+    if (fs.exists(splitdir)) {
+      LOG.info("The " + splitdir + " directory exists.  Hence deleting it to recreate it");
+      if (!fs.delete(splitdir, true)) {
+        throw new IOException("Failed deletion of " + splitdir
+            + " before creating them again.");
+      }
+    }
+    if (!fs.mkdirs(splitdir)) {
+      throw new IOException("Failed create of " + splitdir);
+    }
+  }
+
+  /**
+   * Write out a split reference. Package local so it doesnt leak out of
+   * regionserver.
+   * @param hri {@link HRegionInfo} of the destination
+   * @param familyName Column Family Name
+   * @param f File to split.
+   * @param splitRow Split Row
+   * @param top True if we are referring to the top half of the hfile.
+   * @return Path to created reference.
+   * @throws IOException
+   */
+  public Path splitStoreFile(final HRegionInfo hri, final String familyName,
+      final StoreFile f, final byte[] splitRow, final boolean top) throws IOException {
+    Path splitDir = new Path(getSplitsDir(hri), familyName);
+    return splitStoreFile(this.fs, splitDir, f, splitRow, top);
+  }
+
+  static Path splitStoreFile(final FileSystem fs, final Path splitDir, final StoreFile f,
+      final byte[] splitRow, final boolean top) throws IOException {
+    // A reference to the bottom half of the hsf store file.
+    Reference r =
+      top? Reference.createTopReference(splitRow): Reference.createBottomReference(splitRow);
+    // Add the referred-to regions name as a dot separated suffix.
+    // See REF_NAME_REGEX regex above.  The referred-to regions name is
+    // up in the path of the passed in <code>f</code> -- parentdir is family,
+    // then the directory above is the region name.
+    String parentRegionName = f.getPath().getParent().getParent().getName();
+    // Write reference with same file id only with the other region name as
+    // suffix and into the new region location (under same family).
+    Path p = new Path(splitDir, f.getPath().getName() + "." + parentRegionName);
+    return r.write(fs, p);
   }
 
   // ===========================================================================

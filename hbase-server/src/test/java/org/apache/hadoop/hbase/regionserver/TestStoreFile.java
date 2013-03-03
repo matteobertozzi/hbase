@@ -155,7 +155,7 @@ public class TestStoreFile extends HBaseTestCase {
     kv = KeyValue.createKeyValueFromKey(reader.getLastKey());
     byte [] finalRow = kv.getRow();
     // Make a reference
-    Path refPath = StoreFile.split(fs, storedir, hsf, midRow, true);
+    Path refPath = HRegionFileSystem.splitStoreFile(fs, storedir, hsf, midRow, true);
     StoreFile refHsf = new StoreFile(this.fs, refPath, conf, cacheConf,
         BloomType.NONE, NoOpDataBlockEncoder.INSTANCE);
     // Now confirm that I can read from the reference and that it only gets
@@ -254,8 +254,8 @@ public class TestStoreFile extends HBaseTestCase {
     StoreFile f = new StoreFile(fs, linkFilePath, conf, cacheConf, BloomType.NONE,
         NoOpDataBlockEncoder.INSTANCE);
     byte[] splitRow = SPLITKEY;
-    Path pathA = StoreFile.split(fs, splitDirA, f, splitRow, true); // top
-    Path pathB = StoreFile.split(fs, splitDirB, f, splitRow, false); // bottom
+    Path pathA = HRegionFileSystem.splitStoreFile(fs, splitDirA, f, splitRow, true); // top
+    Path pathB = HRegionFileSystem.splitStoreFile(fs, splitDirB, f, splitRow, false); // bottom
 
     // OK test the thing
     FSUtils.logFileSystemState(fs, rootDir, LOG);
@@ -302,14 +302,14 @@ public class TestStoreFile extends HBaseTestCase {
     if (this.fs.exists(topDir)) {
       this.fs.delete(topDir, true);
     }
-    Path topPath = StoreFile.split(this.fs, topDir, f, midRow, true);
+    Path topPath = HRegionFileSystem.splitStoreFile(this.fs, topDir, f, midRow, true);
     // Create bottom split.
     Path bottomDir = HStore.getStoreHomedir(this.testDir, "2",
       Bytes.toBytes(f.getPath().getParent().getName()));
     if (this.fs.exists(bottomDir)) {
       this.fs.delete(bottomDir, true);
     }
-    Path bottomPath = StoreFile.split(this.fs, bottomDir, f, midRow, false);
+    Path bottomPath = HRegionFileSystem.splitStoreFile(this.fs, bottomDir, f, midRow, false);
     // Make readers on top and bottom.
     StoreFile.Reader top =
         new StoreFile(this.fs, topPath, conf, cacheConf, BloomType.NONE,
@@ -368,8 +368,8 @@ public class TestStoreFile extends HBaseTestCase {
       // First, do a key that is < than first key. Ensure splits behave
       // properly.
       byte [] badmidkey = Bytes.toBytes("  .");
-      topPath = StoreFile.split(this.fs, topDir, f, badmidkey, true);
-      bottomPath = StoreFile.split(this.fs, bottomDir, f, badmidkey, false);
+      topPath = HRegionFileSystem.splitStoreFile(this.fs, topDir, f, badmidkey, true);
+      bottomPath = HRegionFileSystem.splitStoreFile(this.fs, bottomDir, f, badmidkey, false);
       top = new StoreFile(this.fs, topPath, conf, cacheConf,
           BloomType.NONE,
           NoOpDataBlockEncoder.INSTANCE).createReader();
@@ -414,8 +414,8 @@ public class TestStoreFile extends HBaseTestCase {
 
       // Test when badkey is > than last key in file ('||' > 'zz').
       badmidkey = Bytes.toBytes("|||");
-      topPath = StoreFile.split(this.fs, topDir, f, badmidkey, true);
-      bottomPath = StoreFile.split(this.fs, bottomDir, f, badmidkey, false);
+      topPath = HRegionFileSystem.splitStoreFile(this.fs, topDir, f, badmidkey, true);
+      bottomPath = HRegionFileSystem.splitStoreFile(this.fs, bottomDir, f, badmidkey, false);
       top = new StoreFile(this.fs, topPath, conf, cacheConf,
           BloomType.NONE,
           NoOpDataBlockEncoder.INSTANCE).createReader();
