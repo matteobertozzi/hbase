@@ -509,15 +509,6 @@ public class MasterFileSystem {
     }
   }
 
-
-  public void deleteRegion(HRegionInfo region) throws IOException {
-    HFileArchiver.archiveRegion(conf, fs, region);
-  }
-
-  public void deleteTable(byte[] tableName) throws IOException {
-    fs.delete(new Path(rootdir, Bytes.toString(tableName)), true);
-  }
-
   /**
    * Move the specified file/directory to the hbase temp directory.
    * @param path The path of the file/directory to move

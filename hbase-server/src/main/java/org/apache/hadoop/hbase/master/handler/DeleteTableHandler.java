@@ -28,7 +28,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.catalog.MetaEditor;
 import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.master.AssignmentManager;
@@ -36,6 +35,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.KeeperException;
@@ -96,8 +96,8 @@ public class DeleteTableHandler extends TableEventHandler {
       FileSystem fs = mfs.getFileSystem();
       for (HRegionInfo hri: regions) {
         LOG.debug("Archiving region " + hri.getRegionNameAsString() + " from FS");
-        HFileArchiver.archiveRegion(fs, mfs.getRootDir(),
-            tempTableDir, new Path(tempTableDir, hri.getEncodedName()));
+        HRegionFileSystem.deleteRegionFromFileSystem(masterServices.getConfiguration(),
+          fs, tempTableDir, hri);
       }
 
       // 5. Delete table from FS (temp directory)
@@ -105,14 +105,14 @@ public class DeleteTableHandler extends TableEventHandler {
         LOG.error("Couldn't delete " + tempTableDir);
       }
 
-      LOG.debug("Table '" + tableName + "' archived!");
+      LOG.debug("Table '" + Bytes.toString(tableName) + "' archived!");
     } finally {
       // 6. Update table descriptor cache
-      LOG.debug("Removing '" + tableName + "' descriptor.");
+      LOG.debug("Removing '" + Bytes.toString(tableName) + "' descriptor.");
       this.masterServices.getTableDescriptors().remove(Bytes.toString(tableName));
 
       // 7. If entry for this table in zk, and up in AssignmentManager, remove it.
-      LOG.debug("Marking '" + tableName + "' as deleted.");
+      LOG.debug("Marking '" + Bytes.toString(tableName) + "' as deleted.");
       am.getZKTable().setDeletedTable(Bytes.toString(tableName));
     }
 
