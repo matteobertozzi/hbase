@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.KVComparator;
 import org.apache.hadoop.hbase.KeyValue.MetaKeyComparator;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
@@ -257,6 +258,10 @@ public class StoreFile {
    */
   public boolean isReference() {
     return this.fileInfo.isReference();
+  }
+
+  public Reference getReference() {
+    return this.fileInfo.getReference();
   }
 
   /**

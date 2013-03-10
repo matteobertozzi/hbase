@@ -28,19 +28,22 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HRegionInfo;
+import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.TimeoutExceptionInjector;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.snapshot.ClientSnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.CopyRecoveredEditsTask;
-import org.apache.hadoop.hbase.snapshot.ReferenceRegionHFilesTask;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
+import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
 import org.apache.hadoop.hbase.snapshot.TableInfoCopyTask;
 import org.apache.hadoop.hbase.snapshot.TakeSnapshotUtils;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.zookeeper.KeeperException;
@@ -72,8 +75,8 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
   // TODO consider parallelizing these operations since they are independent. Right now its just
   // easier to keep them serial though
   @Override
-  public void snapshotRegions(List<Pair<HRegionInfo, ServerName>> regionsAndLocations) throws IOException,
-  KeeperException {
+  public void snapshotRegions(List<Pair<HRegionInfo, ServerName>> regionsAndLocations)
+      throws IOException, KeeperException {
     try {
       timeoutInjector.start();
 
@@ -107,7 +110,10 @@ public class DisabledTableSnapshotHandler extends TakeSnapshotHandler {
         monitor.rethrowException();
 
         // 2.3 reference all the files in the region
-        new ReferenceRegionHFilesTask(snapshot, monitor, regionDir, fs, snapshotRegionDir).call();
+        Path tableDir = HTableDescriptor.getTableDir(rootDir, Bytes.toBytes(snapshot.getTable()));
+        SnapshotRegionManifest manifest =
+            SnapshotReferenceUtil.buildManifestFromDisk(conf, fs, tableDir, regionInfo);
+        SnapshotReferenceUtil.writeManifest(fs, snapshotDir, regionInfo.getEncodedName(), manifest);
         monitor.rethrowException();
       }
 

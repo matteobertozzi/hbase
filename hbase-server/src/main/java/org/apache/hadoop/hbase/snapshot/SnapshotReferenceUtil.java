@@ -19,19 +19,38 @@
 package org.apache.hadoop.hbase.snapshot;
 
 import java.io.IOException;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.ArrayList;
 
+import com.google.protobuf.ByteString;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
+import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.FSVisitor;
 
@@ -40,12 +59,160 @@ import org.apache.hadoop.hbase.util.FSVisitor;
  */
 @InterfaceAudience.Private
 public final class SnapshotReferenceUtil {
-  public interface FileVisitor extends FSVisitor.StoreFileVisitor,
+  public static final Log LOG = LogFactory.getLog(SnapshotReferenceUtil.class);
+
+  private static final String REGION_MANIFEST_NAME = "region-manifest.";
+
+  public interface StoreFileVisitor {
+    void storeFile(final HRegionInfo regionInfo, final String familyName,
+       final SnapshotRegionManifest.StoreFile storeFile) throws IOException;
+  }
+
+  public interface FileVisitor extends StoreFileVisitor,
     FSVisitor.RecoveredEditsVisitor, FSVisitor.LogFileVisitor {
   }
 
   private SnapshotReferenceUtil() {
     // private constructor for utility class
+  }
+
+
+  public static SnapshotRegionManifest buildManifestFromRegion (final HRegion region) {
+    SnapshotRegionManifest.Builder manifest = SnapshotRegionManifest.newBuilder();
+
+    // 1. dump region meta info into the snapshot directory
+    LOG.debug("Storing region-info for snapshot.");
+    manifest.setRegionInfo(HRegionInfo.convert(region.getRegionInfo()));
+
+    // 2. iterate through all the stores in the region
+    LOG.debug("Creating references for hfiles");
+
+    // This ensures that we have an atomic view of the directory as long as we have < ls limit
+    // (batch size of the files in a directory) on the namenode. Otherwise, we get back the files in
+    // batches and may miss files being added/deleted. This could be more robust (iteratively
+    // checking to see if we have all the files until we are sure), but the limit is currently 1000
+    // files/batch, far more than the number of store files under a single column family.
+    for (Store store : region.getStores().values()) {
+      // 2.1. build the snapshot reference for the store
+      SnapshotRegionManifest.FamilyFiles.Builder family =
+            SnapshotRegionManifest.FamilyFiles.newBuilder();
+      family.setFamilyName(ByteString.copyFrom(store.getFamily().getName()));
+
+      List<StoreFile> storeFiles = new ArrayList<StoreFile>(store.getStorefiles());
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Adding snapshot references for " + storeFiles  + " hfiles");
+      }
+
+      // 2.2. iterate through all the store's files and create "references".
+      for (int i = 0, sz = storeFiles.size(); i < sz; i++) {
+        StoreFile storeFile = storeFiles.get(i);
+
+        // create "reference" to this store file.
+        LOG.debug("Creating reference for file (" + (i+1) + "/" + sz + "): " + storeFile.getPath());
+        SnapshotRegionManifest.StoreFile.Builder sfManifest =
+              SnapshotRegionManifest.StoreFile.newBuilder();
+        sfManifest.setName(storeFile.getPath().getName());
+        if (storeFile.isReference()) {
+          sfManifest.setReference(storeFile.getReference().convert());
+        }
+        family.addStoreFiles(sfManifest.build());
+      }
+
+      manifest.addFamilyFiles(family.build());
+    }
+
+    return manifest.build();
+  }
+
+  public static SnapshotRegionManifest buildManifestFromDisk (final Configuration conf,
+      final FileSystem fs, final Path tableDir, final HRegionInfo regionInfo) throws IOException {
+    HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs,
+          tableDir, regionInfo);
+    SnapshotRegionManifest.Builder manifest = SnapshotRegionManifest.newBuilder();
+
+    // 1. dump region meta info into the snapshot directory
+    LOG.debug("Storing region-info for snapshot.");
+    manifest.setRegionInfo(HRegionInfo.convert(regionInfo));
+
+    // 2. iterate through all the stores in the region
+    LOG.debug("Creating references for hfiles");
+
+    // This ensures that we have an atomic view of the directory as long as we have < ls limit
+    // (batch size of the files in a directory) on the namenode. Otherwise, we get back the files in
+    // batches and may miss files being added/deleted. This could be more robust (iteratively
+    // checking to see if we have all the files until we are sure), but the limit is currently 1000
+    // files/batch, far more than the number of store files under a single column family.
+    Collection<String> familyNames = regionFs.getFamilies();
+    if (familyNames != null) {
+      for (String familyName: familyNames) {
+        Collection<StoreFileInfo> storeFiles = regionFs.getStoreFiles(familyName);
+        if (storeFiles == null) continue;
+
+        // 2.1. build the snapshot reference for the store
+        SnapshotRegionManifest.FamilyFiles.Builder family =
+              SnapshotRegionManifest.FamilyFiles.newBuilder();
+        family.setFamilyName(ByteString.copyFrom(Bytes.toBytes(familyName)));
+
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Adding snapshot references for " + storeFiles  + " hfiles");
+        }
+
+        // 2.2. iterate through all the store's files and create "references".
+        int i = 0;
+        int sz = storeFiles.size();
+        for (StoreFileInfo storeFile: storeFiles) {
+          // create "reference" to this store file.
+          LOG.debug("Creating reference for file ("+ (++i) +"/" + sz + "): " + storeFile.getPath());
+          SnapshotRegionManifest.StoreFile.Builder sfManifest =
+                SnapshotRegionManifest.StoreFile.newBuilder();
+          sfManifest.setName(storeFile.getPath().getName());
+          if (storeFile.isReference()) {
+            sfManifest.setReference(storeFile.getReference().convert());
+          }
+          family.addStoreFiles(sfManifest.build());
+        }
+
+        manifest.addFamilyFiles(family.build());
+      }
+    }
+
+    return manifest.build();
+  }
+
+  public static List<SnapshotRegionManifest> loadRegionsManifest (final FileSystem fs,
+      final Path snapshotDir) throws IOException {
+    FileStatus[] manifestFiles = FSUtils.listStatus(fs, snapshotDir, new PathFilter() {
+      @Override
+      public boolean accept(Path path) {
+        return path.getName().startsWith(REGION_MANIFEST_NAME);
+      }
+    });
+
+    if (manifestFiles == null || manifestFiles.length == 0) return null;
+
+    ArrayList<SnapshotRegionManifest> manifests =
+        new ArrayList<SnapshotRegionManifest>(manifestFiles.length);
+    for (FileStatus st: manifestFiles) {
+      FSDataInputStream stream = fs.open(st.getPath());
+      try {
+        manifests.add(SnapshotRegionManifest.parseFrom(stream));
+      } finally {
+        stream.close();
+      }
+    }
+
+    return manifests;
+  }
+
+  public static void writeManifest (final FileSystem fs, final Path snapshotDir,
+      final String name, final SnapshotRegionManifest manifest) throws IOException {
+    Path manifestPath = new Path(snapshotDir, REGION_MANIFEST_NAME + '.' + name);
+    FSDataOutputStream stream = fs.create(manifestPath);
+    try {
+      manifest.writeDelimitedTo(stream);
+    } finally {
+      stream.close();
+    }
   }
 
   /**
@@ -106,21 +273,9 @@ public final class SnapshotReferenceUtil {
    * @throws IOException if an error occurred while scanning the directory
    */
   public static void visitTableStoreFiles(final FileSystem fs, final Path snapshotDir,
-      final FSVisitor.StoreFileVisitor visitor) throws IOException {
-    FSVisitor.visitTableStoreFiles(fs, snapshotDir, visitor);
-  }
-
-  /**
-   * Iterate over the snapshot store files in the specified region
-   *
-   * @param fs {@link FileSystem}
-   * @param regionDir {@link Path} to the Snapshot region directory
-   * @param visitor callback object to get the store files
-   * @throws IOException if an error occurred while scanning the directory
-   */
-  public static void visitRegionStoreFiles(final FileSystem fs, final Path regionDir,
-      final FSVisitor.StoreFileVisitor visitor) throws IOException {
-    FSVisitor.visitRegionStoreFiles(fs, regionDir, visitor);
+      final StoreFileVisitor visitor) throws IOException {
+    List<SnapshotRegionManifest> regionManifests = loadRegionsManifest(fs, snapshotDir);
+    if (regionManifests == null || regionManifests.size() == 0) return;
   }
 
   /**
@@ -150,57 +305,6 @@ public final class SnapshotReferenceUtil {
   }
 
   /**
-   * Returns the set of region names available in the snapshot.
-   *
-   * @param fs {@link FileSystem}
-   * @param snapshotDir {@link Path} to the Snapshot directory
-   * @throws IOException if an error occurred while scanning the directory
-   * @return the set of the regions contained in the snapshot
-   */
-  public static Set<String> getSnapshotRegionNames(final FileSystem fs, final Path snapshotDir)
-      throws IOException {
-    FileStatus[] regionDirs = FSUtils.listStatus(fs, snapshotDir, new FSUtils.RegionDirFilter(fs));
-    if (regionDirs == null) return null;
-
-    Set<String> regions = new HashSet<String>();
-    for (FileStatus regionDir: regionDirs) {
-      regions.add(regionDir.getPath().getName());
-    }
-    return regions;
-  }
-
-  /**
-   * Get the list of hfiles for the specified snapshot region.
-   * NOTE: The current implementation keeps one empty file per HFile in the region.
-   * The file name matches the one in the original table, and by reconstructing
-   * the path you can quickly jump to the referenced file.
-   *
-   * @param fs {@link FileSystem}
-   * @param snapshotRegionDir {@link Path} to the Snapshot region directory
-   * @return Map of hfiles per family, the key is the family name and values are hfile names
-   * @throws IOException if an error occurred while scanning the directory
-   */
-  public static Map<String, List<String>> getRegionHFileReferences(final FileSystem fs,
-      final Path snapshotRegionDir) throws IOException {
-    final Map<String, List<String>> familyFiles = new TreeMap<String, List<String>>();
-
-    visitRegionStoreFiles(fs, snapshotRegionDir,
-      new FSVisitor.StoreFileVisitor() {
-        public void storeFile (final String region, final String family, final String hfile)
-            throws IOException {
-          List<String> hfiles = familyFiles.get(family);
-          if (hfiles == null) {
-            hfiles = new LinkedList<String>();
-            familyFiles.put(family, hfiles);
-          }
-          hfiles.add(hfile);
-        }
-    });
-
-    return familyFiles;
-  }
-
-  /**
    * Returns the store file names in the snapshot.
    *
    * @param fs {@link FileSystem}
@@ -211,9 +315,10 @@ public final class SnapshotReferenceUtil {
   public static Set<String> getHFileNames(final FileSystem fs, final Path snapshotDir)
       throws IOException {
     final Set<String> names = new HashSet<String>();
-    visitTableStoreFiles(fs, snapshotDir, new FSVisitor.StoreFileVisitor() {
-      public void storeFile (final String region, final String family, final String hfile)
-          throws IOException {
+    visitTableStoreFiles(fs, snapshotDir, new StoreFileVisitor() {
+      public void storeFile (final HRegionInfo regionInfo, final String family,
+          final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
+        String hfile = storeFile.getName();
         if (HFileLink.isHFileLink(hfile)) {
           names.add(HFileLink.getReferencedHFileName(hfile));
         } else {

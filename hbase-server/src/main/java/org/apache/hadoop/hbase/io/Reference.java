@@ -190,7 +190,7 @@ public class Reference {
     }
   }
 
-  FSProtos.Reference convert() {
+  public FSProtos.Reference convert() {
     FSProtos.Reference.Builder builder = FSProtos.Reference.newBuilder();
     builder.setRange(isTopFileRegion(getFileRegion())?
       FSProtos.Reference.Range.TOP: FSProtos.Reference.Range.BOTTOM);

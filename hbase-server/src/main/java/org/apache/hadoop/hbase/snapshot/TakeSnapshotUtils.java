@@ -38,10 +38,15 @@ import org.apache.hadoop.hbase.errorhandling.TimeoutExceptionInjector;
 import org.apache.hadoop.hbase.exceptions.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
+import org.apache.hadoop.hbase.regionserver.Store;
+import org.apache.hadoop.hbase.regionserver.StoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.wal.HLogUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
+
+import com.google.protobuf.ByteString;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
@@ -71,27 +76,6 @@ public class TakeSnapshotUtils {
       String regionName) {
     Path snapshotDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(desc, rootDir);
     return HRegion.getRegionDir(snapshotDir, regionName);
-  }
-
-  /**
-   * Get the snapshot directory for each family to be added to the the snapshot
-   * @param snapshot description of the snapshot being take
-   * @param snapshotRegionDir directory in the snapshot where the region directory information
-   *          should be stored
-   * @param families families to be added (can be null)
-   * @return paths to the snapshot directory for each family, in the same order as the families
-   *         passed in
-   */
-  public static List<Path> getFamilySnapshotDirectories(SnapshotDescription snapshot,
-      Path snapshotRegionDir, FileStatus[] families) {
-    if (families == null || families.length == 0) return Collections.emptyList();
-
-    List<Path> familyDirs = new ArrayList<Path>(families.length);
-    for (FileStatus family : families) {
-      // build the reference directory name
-      familyDirs.add(new Path(snapshotRegionDir, family.getPath().getName()));
-    }
-    return familyDirs;
   }
 
   /**

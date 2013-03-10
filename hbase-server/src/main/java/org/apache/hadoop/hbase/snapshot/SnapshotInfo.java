@@ -36,15 +36,14 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.HLogLink;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
-import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.snapshot.SnapshotReferenceUtil;
+import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
@@ -189,9 +188,10 @@ public final class SnapshotInfo extends Configured implements Tool {
     final AtomicLong logSize = new AtomicLong();
     SnapshotReferenceUtil.visitReferencedFiles(fs, snapshotDir,
       new SnapshotReferenceUtil.FileVisitor() {
-        public void storeFile (final String region, final String family, final String hfile)
-            throws IOException {
-          Path path = new Path(family, HFileLink.createHFileLinkName(table, region, hfile));
+        public void storeFile (final HRegionInfo regionInfo, final String family,
+            final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
+          Path path = new Path(family,
+              HFileLink.createHFileLinkName(regionInfo, storeFile.getName()));
           HFileLink link = new HFileLink(conf, path);
           boolean inArchive = false;
           long size = -1;
@@ -212,7 +212,7 @@ public final class SnapshotInfo extends Configured implements Tool {
           if (showFiles) {
             System.out.printf("%8s %s/%s/%s/%s %s%n",
               (size < 0 ? "-" : StringUtils.humanReadableInt(size)),
-              table, region, family, hfile,
+              table, regionInfo.getEncodedName(), family, storeFile.getName(),
               (inArchive ? "(archive)" : (size < 0) ? "(NOT FOUND)" : ""));
           }
         }

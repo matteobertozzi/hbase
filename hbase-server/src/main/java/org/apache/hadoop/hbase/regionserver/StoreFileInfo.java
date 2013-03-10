@@ -133,6 +133,11 @@ public class StoreFileInfo {
     return this.reference != null;
   }
 
+  /** @return The Reference */
+  public Reference getReference() {
+    return this.reference;
+  }
+
   /** @return True if the store file is a top Reference */
   public boolean isTopReference() {
     return this.reference != null && Reference.isTopFileRegion(this.reference.getFileRegion());

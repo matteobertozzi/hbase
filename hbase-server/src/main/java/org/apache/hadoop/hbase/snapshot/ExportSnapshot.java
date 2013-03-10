@@ -40,12 +40,14 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.exceptions.ExportSnapshotException;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.HLogLink;
 import org.apache.hadoop.hbase.mapreduce.JobUtil;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.SnapshotDescription;
+import org.apache.hadoop.hbase.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -374,9 +376,10 @@ public final class ExportSnapshot extends Configured implements Tool {
     // Get snapshot files
     SnapshotReferenceUtil.visitReferencedFiles(fs, snapshotDir,
       new SnapshotReferenceUtil.FileVisitor() {
-        public void storeFile (final String region, final String family, final String hfile)
-            throws IOException {
-          Path path = new Path(family, HFileLink.createHFileLinkName(table, region, hfile));
+        public void storeFile (final HRegionInfo regionInfo, final String family,
+            final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
+          Path path = new Path(family,
+              HFileLink.createHFileLinkName(regionInfo, storeFile.getName()));
           long size = new HFileLink(conf, path).getFileStatus(fs).getLen();
           files.add(new Pair<Path, Long>(path, size));
         }

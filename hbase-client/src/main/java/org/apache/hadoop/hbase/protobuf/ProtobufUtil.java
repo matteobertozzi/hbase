@@ -34,6 +34,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NavigableSet;
 
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -1792,6 +1795,25 @@ public final class ProtobufUtil {
       throw new IOException(e);
     } catch (IllegalAccessException e) {
       throw new IOException(e);
+    }
+  }
+
+  /**
+   * @param fs
+   * @param path
+   * @param m Message to write on file
+   */
+  public static void writeToFile(final FileSystem fs, final Path path, final Message m)
+      throws IOException {
+    FSDataOutputStream stream = fs.create(path);
+    try {
+      stream.write(PB_MAGIC);
+      m.writeDelimitedTo(stream);
+    } catch (IOException e) {
+      fs.delete(path, true);
+      throw e;
+    } finally {
+      stream.close();
     }
   }
 }
