@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.client.VersionInfoUtil;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
@@ -241,8 +242,11 @@ public class MasterRpcServices extends RSRpcServices
       master.checkServiceStarted();
       ClusterStatusProtos.ServerLoad sl = request.getLoad();
       ServerName serverName = ProtobufUtil.toServerName(request.getServer());
+
       ServerLoad oldLoad = master.getServerManager().getLoad(serverName);
       master.getServerManager().regionServerReport(serverName, new ServerLoad(sl));
+      LOG.info(serverName + " REPORT VERSION " + VersionInfoUtil.getCurrentClientVersionNumber());
+
       if (sl != null && master.metricsMaster != null) {
         // Up our metrics.
         master.metricsMaster.incrementRequests(sl.getTotalNumberOfRequests()
