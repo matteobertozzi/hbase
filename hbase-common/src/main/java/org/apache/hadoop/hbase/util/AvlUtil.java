@@ -21,6 +21,9 @@ package org.apache.hadoop.hbase.util;
 
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
@@ -554,6 +557,142 @@ public final class AvlUtil {
      */
     public static <TNode extends AvlLinkedNode> boolean isLinked(TNode node) {
       return node.iterPrev != null && node.iterNext != null;
+    }
+  }
+
+  public static class AvlHashMap<TNode extends AvlNode> {
+    protected final Object[] buckets;
+
+    public AvlHashMap(int size) {
+      buckets = new Object[size];
+    }
+
+    public void insert(int index, TNode node) {
+      buckets[index] = AvlTree.insert(getRoot(index), node);
+    }
+
+    public boolean remove(int index, Object key,
+        final AvlKeyComparator<TNode> keyComparator) {
+      final AtomicBoolean removed = new AtomicBoolean(false);
+      buckets[index] = AvlTree.remove(getRoot(index), key, keyComparator, removed);
+      return removed.get();
+    }
+
+    public TNode get(int index, final Object key, final AvlKeyComparator<TNode> keyComparator) {
+      return AvlTree.get(getRoot(index), key, keyComparator);
+    }
+
+    public TNode getRoot(int index) {
+      return (TNode)buckets[index];
+    }
+
+    public int getIndexFromKey(Object key) {
+      return getIndex(getHash(key.hashCode()));
+    }
+
+    public int getIndex(int hash) {
+      return hash % buckets.length;
+    }
+
+    public int getHash(int h) {
+      h ^= h >>> 16;
+      h *= 0x85ebca6b;
+      h ^= h >>> 13;
+      h *= 0xc2b2ae35;
+      h ^= h >>> 16;
+      h = h & 0x7fffffff;
+      assert h >= 0;
+      return h;
+    }
+  }
+
+  public static class AvlConcurrentHashMap<TNode extends AvlNode> extends AvlHashMap<TNode> {
+    private final ReentrantReadWriteLock[] locks;
+    private final int itemsPerLock;
+
+    public AvlConcurrentHashMap(int nbuckets, int nlocks) {
+      super(nbuckets);
+      assert nbuckets % nlocks == 0;
+      itemsPerLock = nbuckets / nlocks;
+      locks = new ReentrantReadWriteLock[nlocks];
+      for (int i = 0; i < locks.length; ++i) {
+        locks[i] = new ReentrantReadWriteLock();
+      }
+    }
+
+    public void insert(TNode node, Object nodeKey) {
+      insert(getIndexFromKey(nodeKey), node);
+    }
+
+    public void insert(int index, TNode node) {
+      final Lock lock = getLock(index).writeLock();
+      lock.lock();
+      try {
+        super.insert(index, node);
+      } finally {
+        lock.unlock();
+      }
+    }
+
+    public TNode insertIfAbsent(int index, TNode node, AvlKeyComparator<TNode> keyComparator) {
+      final Lock lock = getLock(index).writeLock();
+      lock.lock();
+      try {
+        TNode oldNode = super.get(index, node, keyComparator);
+        if (oldNode != null) return oldNode;
+        super.insert(index, node);
+        return node;
+      } finally {
+        lock.unlock();
+      }
+    }
+
+    public boolean remove(Object key, AvlKeyComparator<TNode> keyComparator) {
+      return remove(getIndexFromKey(key), key, keyComparator);
+    }
+
+    public boolean remove(int index, Object key, AvlKeyComparator<TNode> keyComparator) {
+      final Lock lock = getLock(index).writeLock();
+      lock.lock();
+      try {
+        return super.remove(index, key, keyComparator);
+      } finally {
+        lock.unlock();
+      }
+    }
+
+    public TNode get(final Object key, final AvlKeyComparator<TNode> keyComparator) {
+      return get(getIndexFromKey(key), key, keyComparator);
+    }
+
+    public TNode get(int index, final Object key, final AvlKeyComparator<TNode> keyComparator) {
+      final Lock lock = getLock(index).readLock();
+      lock.lock();
+      try {
+        return super.get(index, key, keyComparator);
+      } finally {
+        lock.unlock();
+      }
+    }
+
+    public void visit(final AvlNodeVisitor<TNode> visitor) {
+      for (int i = 0; i < buckets.length; ++i) {
+        visit(i, visitor);
+      }
+    }
+
+    private void visit(final int index, final AvlNodeVisitor<TNode> visitor) {
+      final Lock lock = getLock(index).readLock();
+      lock.lock();
+      try {
+        AvlTree.visit(getRoot(index), visitor);
+      } finally {
+        lock.unlock();
+      }
+    }
+
+    public ReadWriteLock getLock(int index) {
+      return locks[index / itemsPerLock];
     }
   }
 }
