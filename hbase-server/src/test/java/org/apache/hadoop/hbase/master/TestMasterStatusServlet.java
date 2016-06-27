@@ -34,6 +34,8 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -165,7 +167,7 @@ public class TestMasterStatusServlet {
 
     // Add 100 regions as in-transition
     TreeSet<RegionState> regionsInTransition = new TreeSet<RegionState>(
-      RegionStates.REGION_STATE_COMPARATOR);
+      RegionStates.REGION_STATE_STAMP_COMPARATOR);
     for (byte i = 0; i < 100; i++) {
       HRegionInfo hri = new HRegionInfo(FAKE_TABLE.getTableName(),
           new byte[]{i}, new byte[]{(byte) (i+1)});

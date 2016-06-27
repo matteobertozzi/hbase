@@ -18,7 +18,7 @@ limitations under the License.
 </%doc>
 <%import>
 org.apache.hadoop.hbase.HRegionInfo;
-org.apache.hadoop.hbase.master.AssignmentManager;
+org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 org.apache.hadoop.hbase.master.RegionState;
 org.apache.hadoop.conf.Configuration;
 org.apache.hadoop.hbase.HBaseConfiguration;
@@ -35,7 +35,7 @@ int limit = 100;
 
 <%java SortedSet<RegionState> rit = assignmentManager
   .getRegionStates().getRegionsInTransitionOrderedByTimestamp();
-  Map<String, AtomicInteger> failedRegionTracker = assignmentManager.getFailedOpenTracker();
+  Map<HRegionInfo, AtomicInteger> failedRegionTracker = assignmentManager.getFailedOpenTracker();
    %>
 
 <%if !rit.isEmpty() %>
@@ -99,8 +99,7 @@ int numOfPages = (int) Math.ceil(numOfRITs * 1.0 / ritsPerPage);
             </%if>
                         <%java>
                           String retryStatus = "0";
-                          AtomicInteger numOpenRetries = failedRegionTracker.get(
-                              rs.getRegion().getEncodedName());
+                          AtomicInteger numOpenRetries = failedRegionTracker.get(rs.getRegion());
                           if (numOpenRetries != null ) {
                             retryStatus = Integer.toString(numOpenRetries.get());
                           } else if (rs.getState() ==  RegionState.State.FAILED_OPEN) {

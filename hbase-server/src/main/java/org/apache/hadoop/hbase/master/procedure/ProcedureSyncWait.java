@@ -31,24 +31,16 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoordinatedStateException;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.ProcedureInfo;
-import org.apache.hadoop.hbase.ServerName;
-import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
-import org.apache.hadoop.hbase.master.AssignmentManager;
-import org.apache.hadoop.hbase.master.RegionState.State;
-import org.apache.hadoop.hbase.master.RegionStates;
-import org.apache.hadoop.hbase.master.ServerManager;
+import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Threads;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 
 /**
  * Helper to synchronously wait on conditions.
@@ -143,12 +135,7 @@ public final class ProcedureSyncWait {
     }
   }
 
-  public static byte[] waitForProcedureToComplete(ProcedureExecutor<MasterProcedureEnv> procExec,
-      final long procId) throws IOException {
-    return waitForProcedureToComplete(procExec, procId, Long.MAX_VALUE);
-  }
-
-  private static byte[] waitForProcedureToComplete(
+  public static byte[] waitForProcedureToComplete(
       final ProcedureExecutor<MasterProcedureEnv> procExec, final long procId, final long timeout)
       throws Exception {
     waitFor(procExec.getEnvironment(), "wait for procId=" + procId,
@@ -216,44 +203,14 @@ public final class ProcedureSyncWait {
     }
   }
 
-  protected static void waitRegionServers(final MasterProcedureEnv env) throws IOException {
-    final ServerManager sm = env.getMasterServices().getServerManager();
-    ProcedureSyncWait.waitFor(env, "server to assign region(s)",
-        new ProcedureSyncWait.Predicate<Boolean>() {
-      @Override
-      public Boolean evaluate() throws IOException {
-        List<ServerName> servers = sm.createDestinationServersList();
-        return servers != null && !servers.isEmpty();
-      }
-    });
-  }
-
-  protected static List<HRegionInfo> getRegionsFromMeta(final MasterProcedureEnv env,
-      final TableName tableName) throws IOException {
-    return ProcedureSyncWait.waitFor(env, "regions of table=" + tableName + " from meta",
-        new ProcedureSyncWait.Predicate<List<HRegionInfo>>() {
-      @Override
-      public List<HRegionInfo> evaluate() throws IOException {
-        if (TableName.META_TABLE_NAME.equals(tableName)) {
-          return new MetaTableLocator().getMetaRegions(env.getMasterServices().getZooKeeper());
-        }
-        return MetaTableAccessor.getTableRegions(env.getMasterServices().getConnection(),tableName);
-      }
-    });
-  }
-
   protected static void waitRegionInTransition(final MasterProcedureEnv env,
       final List<HRegionInfo> regions) throws IOException, CoordinatedStateException {
-    final AssignmentManager am = env.getMasterServices().getAssignmentManager();
-    final RegionStates states = am.getRegionStates();
+    final RegionStates states = env.getAssignmentManager().getRegionStates();
     for (final HRegionInfo region : regions) {
       ProcedureSyncWait.waitFor(env, "regions " + region.getRegionNameAsString() + " in transition",
           new ProcedureSyncWait.Predicate<Boolean>() {
         @Override
         public Boolean evaluate() throws IOException {
-          if (states.isRegionInState(region, State.FAILED_OPEN)) {
-            am.regionOffline(region);
-          }
           return !states.isRegionInTransition(region);
         }
       });

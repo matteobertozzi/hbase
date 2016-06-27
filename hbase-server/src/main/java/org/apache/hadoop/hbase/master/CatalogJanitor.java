@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FSUtils;
@@ -110,7 +111,7 @@ public class CatalogJanitor extends ScheduledChore {
           && !this.services.isInMaintenanceMode()
           && am != null
           && am.isFailoverCleanupDone()
-          && am.getRegionStates().getRegionsInTransition().size() == 0) {
+          && am.hasRegionsInTransition()) {
         scan();
       } else {
         LOG.warn("CatalogJanitor disabled! Not running scan.");

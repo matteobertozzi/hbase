@@ -2903,8 +2903,8 @@ public final class ProtobufUtil {
       backupMasters.add(ProtobufUtil.toServerName(sn));
     }
 
-    Set<RegionState> rit = null;
-    rit = new HashSet<RegionState>(proto.getRegionsInTransitionList().size());
+    List<RegionState> rit = null;
+    rit = new ArrayList<RegionState>(proto.getRegionsInTransitionList().size());
     for (RegionInTransition region : proto.getRegionsInTransitionList()) {
       RegionState value = RegionState.convert(region.getRegionState());
       rit.add(value);
@@ -3130,7 +3130,7 @@ public final class ProtobufUtil {
    * has a serialized {@link ServerName} in it.
    * @return Returns null if <code>data</code> is null else converts passed data
    * to a ServerName instance.
-   * @throws DeserializationException 
+   * @throws DeserializationException
    */
   public static ServerName parseServerNameFrom(final byte [] data) throws DeserializationException {
     if (data == null || data.length <= 0) return null;

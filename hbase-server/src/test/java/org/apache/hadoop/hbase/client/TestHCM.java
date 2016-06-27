@@ -1035,7 +1035,7 @@ public class TestHCM {
     Assert.assertNotNull(curServer.getOnlineRegion(regionName));
     Assert.assertNull(destServer.getOnlineRegion(regionName));
     Assert.assertFalse(TEST_UTIL.getMiniHBaseCluster().getMaster().
-        getAssignmentManager().getRegionStates().isRegionsInTransition());
+        getAssignmentManager().hasRegionsInTransition());
 
     // Moving. It's possible that we don't have all the regions online at this point, so
     //  the test must depends only on the region we're looking at.
@@ -1048,7 +1048,7 @@ public class TestHCM {
     while (destServer.getOnlineRegion(regionName) == null ||
         destServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes) ||
         curServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes) ||
-        master.getAssignmentManager().getRegionStates().isRegionsInTransition()) {
+        master.getAssignmentManager().hasRegionsInTransition()) {
       // wait for the move to be finished
       Thread.sleep(1);
     }
@@ -1107,7 +1107,7 @@ public class TestHCM {
     while (curServer.getOnlineRegion(regionName) == null ||
         destServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes) ||
         curServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes) ||
-        master.getAssignmentManager().getRegionStates().isRegionsInTransition()) {
+        master.getAssignmentManager().hasRegionsInTransition()) {
       // wait for the move to be finished
       Thread.sleep(1);
     }
@@ -1352,7 +1352,7 @@ public class TestHCM {
       Assert.assertNotNull(curServer.getOnlineRegion(regionName));
       Assert.assertNull(destServer.getOnlineRegion(regionName));
       Assert.assertFalse(TEST_UTIL.getMiniHBaseCluster().getMaster().
-          getAssignmentManager().getRegionStates().isRegionsInTransition());
+          getAssignmentManager().hasRegionsInTransition());
 
        // Moving. It's possible that we don't have all the regions online at this point, so
       //  the test must depends only on the region we're looking at.
@@ -1365,7 +1365,7 @@ public class TestHCM {
       while (destServer.getOnlineRegion(regionName) == null ||
           destServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes) ||
           curServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes) ||
-          master.getAssignmentManager().getRegionStates().isRegionsInTransition()) {
+          master.getAssignmentManager().hasRegionsInTransition()) {
         // wait for the move to be finished
         Thread.sleep(1);
       }

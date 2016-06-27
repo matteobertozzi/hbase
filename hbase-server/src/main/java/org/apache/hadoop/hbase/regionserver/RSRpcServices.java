@@ -1687,8 +1687,11 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           // The region is already online. This should not happen any more.
           String error = "Received OPEN for the region:"
             + region.getRegionNameAsString() + ", which is already online";
-          regionServer.abort(error);
-          throw new IOException(error);
+          LOG.warn(error);
+          //regionServer.abort(error);
+          //throw new IOException(error);
+          builder.addOpeningState(RegionOpeningState.OPENED);
+          continue;
         }
         LOG.info("Open " + region.getRegionNameAsString());
 

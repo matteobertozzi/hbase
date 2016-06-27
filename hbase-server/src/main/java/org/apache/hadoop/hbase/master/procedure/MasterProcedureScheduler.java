@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -1158,8 +1157,9 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
     @Override
     public String toString() {
-      return String.format("%s(%s, suspended=%s xlock=%s sharedLock=%s size=%s)",
-        getClass().getSimpleName(), key, isSuspended(), hasExclusiveLock(), sharedLock, size());
+      return String.format("%s(%s, suspended=%s xlock=%s(%s) sharedLock=%s size=%s)",
+        getClass().getSimpleName(), key, isSuspended(),
+        hasExclusiveLock(), exclusiveLockProcIdOwner, sharedLock, size());
     }
   }
 

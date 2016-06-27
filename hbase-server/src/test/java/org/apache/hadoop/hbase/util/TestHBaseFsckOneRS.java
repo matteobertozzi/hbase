@@ -45,9 +45,10 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.io.hfile.TestHFile;
-import org.apache.hadoop.hbase.master.AssignmentManager;
-import org.apache.hadoop.hbase.master.RegionState;
-import org.apache.hadoop.hbase.master.RegionStates;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.RegionStates;
+import org.apache.hadoop.hbase.master.assignment.RegionStates.RegionStateNode;
+import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -1675,12 +1676,11 @@ public class TestHBaseFsckOneRS extends BaseTestHBaseFsck {
       st.prepare();
       st.stepsBeforePONR(regionServer, regionServer, false);
       AssignmentManager am = cluster.getMaster().getAssignmentManager();
-      for (RegionState state : am.getRegionStates().getRegionsInTransition()) {
-        am.regionOffline(state.getRegion());
+      for (RegionStateNode state : am.getRegionStates().getRegionsInTransition()) {
+        am.offlineRegion(state.getRegionInfo());
       }
-      Map<HRegionInfo, ServerName> regionsMap = new HashMap<HRegionInfo, ServerName>();
-      regionsMap.put(regions.get(0).getRegionInfo(), regionServer.getServerName());
-      am.assign(regionsMap);
+      am.moveAsync(new RegionPlan(regions.get(0).getRegionInfo(),
+        regionServer.getServerName(), regionServer.getServerName()));
       am.waitForAssignment(regions.get(0).getRegionInfo());
       HBaseFsck hbck = doFsck(conf, false);
       assertErrors(hbck, new HBaseFsck.ErrorReporter.ERROR_CODE[] {

@@ -32,9 +32,7 @@ import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
-import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.ServerLoad;
 import org.apache.hadoop.hbase.ServerName;
@@ -51,6 +49,7 @@ import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.QosPriority;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.procedure.MasterProcedureManager;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -79,7 +78,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStatusService;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRSFatalErrorResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
@@ -88,7 +86,6 @@ import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.security.visibility.VisibilityController;
-import org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcController;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.com.google.protobuf.UnsafeByteOperations;
@@ -243,8 +240,10 @@ public class MasterRpcServices extends RSRpcServices
       ServerLoad oldLoad = master.getServerManager().getLoad(serverName);
       ServerLoad newLoad = new ServerLoad(sl);
       master.getServerManager().regionServerReport(serverName, newLoad);
-      master.getAssignmentManager2().reportOnlineRegions(serverName, newLoad.getRegionsLoad().keySet());
-      LOG.info(serverName + " REPORT VERSION " + VersionInfoUtil.getCurrentClientVersionNumber());
+
+      master.getAssignmentManager().reportOnlineRegions(serverName,
+        VersionInfoUtil.getCurrentClientVersionNumber(),
+        newLoad.getRegionsLoad().keySet());
 
       if (sl != null && master.metricsMaster != null) {
         // Up our metrics.
@@ -318,25 +317,25 @@ public class MasterRpcServices extends RSRpcServices
   public AssignRegionResponse assignRegion(RpcController controller,
       AssignRegionRequest req) throws ServiceException {
     try {
-      final byte [] regionName = req.getRegion().getValue().toByteArray();
-      RegionSpecifierType type = req.getRegion().getType();
-      AssignRegionResponse arr = AssignRegionResponse.newBuilder().build();
-
       master.checkInitialized();
+
+      final RegionSpecifierType type = req.getRegion().getType();
       if (type != RegionSpecifierType.REGION_NAME) {
         LOG.warn("assignRegion specifier type: expected: " + RegionSpecifierType.REGION_NAME
           + " actual: " + type);
       }
-      RegionStates regionStates = master.getAssignmentManager().getRegionStates();
-      HRegionInfo regionInfo = regionStates.getRegionInfo(regionName);
-      if (regionInfo == null) throw new UnknownRegionException(Bytes.toString(regionName));
+
+      final byte[] regionName = req.getRegion().getValue().toByteArray();
+      final HRegionInfo regionInfo = master.getAssignmentManager().getRegionInfo(regionName);
+      if (regionInfo == null) throw new UnknownRegionException(Bytes.toStringBinary(regionName));
+
+      final AssignRegionResponse arr = AssignRegionResponse.newBuilder().build();
       if (master.cpHost != null) {
         if (master.cpHost.preAssign(regionInfo)) {
           return arr;
         }
       }
-      LOG.info(master.getClientIdAuditPrefix()
-        + " assign " + regionInfo.getRegionNameAsString());
+      LOG.info(master.getClientIdAuditPrefix() + " assign " + regionInfo.getRegionNameAsString());
       master.getAssignmentManager().assign(regionInfo, true);
       if (master.cpHost != null) {
         master.cpHost.postAssign(regionInfo);
@@ -346,6 +345,7 @@ public class MasterRpcServices extends RSRpcServices
       throw new ServiceException(ioe);
     }
   }
+
 
   @Override
   public BalanceResponse balance(RpcController controller,
@@ -1102,24 +1102,24 @@ public class MasterRpcServices extends RSRpcServices
   @Override
   public OfflineRegionResponse offlineRegion(RpcController controller,
       OfflineRegionRequest request) throws ServiceException {
-    final byte [] regionName = request.getRegion().getValue().toByteArray();
-    RegionSpecifierType type = request.getRegion().getType();
-    if (type != RegionSpecifierType.REGION_NAME) {
-      LOG.warn("moveRegion specifier type: expected: " + RegionSpecifierType.REGION_NAME
-        + " actual: " + type);
-    }
-
     try {
       master.checkInitialized();
-      Pair<HRegionInfo, ServerName> pair =
-        MetaTableAccessor.getRegion(master.getConnection(), regionName);
-      if (pair == null) throw new UnknownRegionException(Bytes.toStringBinary(regionName));
-      HRegionInfo hri = pair.getFirst();
+
+      final RegionSpecifierType type = request.getRegion().getType();
+      if (type != RegionSpecifierType.REGION_NAME) {
+        LOG.warn("moveRegion specifier type: expected: " + RegionSpecifierType.REGION_NAME
+          + " actual: " + type);
+      }
+
+      final byte[] regionName = request.getRegion().getValue().toByteArray();
+      final HRegionInfo hri = master.getAssignmentManager().getRegionInfo(regionName);
+      if (hri == null) throw new UnknownRegionException(Bytes.toStringBinary(regionName));
+
       if (master.cpHost != null) {
         master.cpHost.preRegionOffline(hri);
       }
       LOG.info(master.getClientIdAuditPrefix() + " offline " + hri.getRegionNameAsString());
-      master.getAssignmentManager().regionOffline(hri);
+      master.getAssignmentManager().offlineRegion(hri);
       if (master.cpHost != null) {
         master.cpHost.postRegionOffline(hri);
       }
@@ -1256,28 +1256,20 @@ public class MasterRpcServices extends RSRpcServices
   public UnassignRegionResponse unassignRegion(RpcController controller,
       UnassignRegionRequest req) throws ServiceException {
     try {
-      final byte [] regionName = req.getRegion().getValue().toByteArray();
-      RegionSpecifierType type = req.getRegion().getType();
-      final boolean force = req.getForce();
-      UnassignRegionResponse urr = UnassignRegionResponse.newBuilder().build();
-
       master.checkInitialized();
+
+      final RegionSpecifierType type = req.getRegion().getType();
       if (type != RegionSpecifierType.REGION_NAME) {
         LOG.warn("unassignRegion specifier type: expected: " + RegionSpecifierType.REGION_NAME
           + " actual: " + type);
       }
-      Pair<HRegionInfo, ServerName> pair =
-        MetaTableAccessor.getRegion(master.getConnection(), regionName);
-      if (Bytes.equals(HRegionInfo.FIRST_META_REGIONINFO.getRegionName(),regionName)) {
-        pair = new Pair<HRegionInfo, ServerName>(HRegionInfo.FIRST_META_REGIONINFO,
-            master.getMetaTableLocator().getMetaRegionLocation(master.getZooKeeper()));
-      }
-      if (pair == null) {
-        throw new UnknownRegionException(Bytes.toString(regionName));
-      }
 
-      if (pair == null) throw new UnknownRegionException(Bytes.toString(regionName));
-      HRegionInfo hri = pair.getFirst();
+      final byte[] regionName = req.getRegion().getValue().toByteArray();
+      final HRegionInfo hri = master.getAssignmentManager().getRegionInfo(regionName);
+      if (hri == null) throw new UnknownRegionException(Bytes.toStringBinary(regionName));
+
+      final boolean force = req.getForce();
+      final UnassignRegionResponse urr = UnassignRegionResponse.newBuilder().build();
       if (master.cpHost != null) {
         if (master.cpHost.preUnassign(hri, force)) {
           return urr;
@@ -1289,7 +1281,6 @@ public class MasterRpcServices extends RSRpcServices
       if (master.cpHost != null) {
         master.cpHost.postUnassign(hri, force);
       }
-
       return urr;
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
@@ -1301,28 +1292,7 @@ public class MasterRpcServices extends RSRpcServices
       ReportRegionStateTransitionRequest req) throws ServiceException {
     try {
       master.checkServiceStarted();
-
-      master.getAssignmentManager2().reportRegionStateTransition(req);
-
-      RegionStateTransition rt = req.getTransition(0);
-      TableName tableName = ProtobufUtil.toTableName(
-        rt.getRegionInfo(0).getTableName());
-      RegionStates regionStates = master.getAssignmentManager().getRegionStates();
-      if (!(TableName.META_TABLE_NAME.equals(tableName)
-          && regionStates.getRegionState(HRegionInfo.FIRST_META_REGIONINFO) != null)
-            && !master.getAssignmentManager().isFailoverCleanupDone()) {
-        // Meta region is assigned before master finishes the
-        // failover cleanup. So no need this check for it
-        throw new PleaseHoldException("Master is rebuilding user regions");
-      }
-      ServerName sn = ProtobufUtil.toServerName(req.getServer());
-      String error = master.getAssignmentManager().onRegionTransition(sn, rt);
-      ReportRegionStateTransitionResponse.Builder rrtr =
-        ReportRegionStateTransitionResponse.newBuilder();
-      if (error != null) {
-        rrtr.setErrorMessage(error);
-      }
-      return rrtr.build();
+      return master.getAssignmentManager().reportRegionStateTransition(req);
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }

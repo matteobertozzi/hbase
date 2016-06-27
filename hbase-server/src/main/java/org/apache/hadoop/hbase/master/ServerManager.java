@@ -623,12 +623,7 @@ public class ServerManager {
       return;
     }
 
-    boolean carryingMeta = master.getAssignmentManager().isCarryingMeta(serverName);
-    ProcedureExecutor<MasterProcedureEnv> procExec = this.master.getMasterProcedureExecutor();
-    procExec.submitProcedure(new ServerCrashProcedure(
-      procExec.getEnvironment(), serverName, true, carryingMeta));
-    LOG.debug("Added=" + serverName +
-      " to dead servers, submitted shutdown handler to be executed meta=" + carryingMeta);
+    submitServerCrash(serverName, true);
 
     // Tell our listeners that a server was removed
     if (!this.listeners.isEmpty()) {
@@ -636,6 +631,16 @@ public class ServerManager {
         listener.serverRemoved(serverName);
       }
     }
+  }
+
+  // TODO: Move to AM
+  private void submitServerCrash(final ServerName serverName, final boolean shouldSplitWal) {
+    boolean carryingMeta = master.getAssignmentManager().isCarryingMeta(serverName);
+    ProcedureExecutor<MasterProcedureEnv> procExec = this.master.getMasterProcedureExecutor();
+    procExec.submitProcedure(new ServerCrashProcedure(procExec.getEnvironment(), serverName,
+      shouldSplitWal, carryingMeta));
+    LOG.debug("Added=" + serverName +
+      " to dead servers, submitted shutdown handler to be executed meta=" + carryingMeta);
   }
 
   @VisibleForTesting
@@ -669,9 +674,7 @@ public class ServerManager {
     }
 
     this.deadservers.add(serverName);
-    ProcedureExecutor<MasterProcedureEnv> procExec = this.master.getMasterProcedureExecutor();
-    procExec.submitProcedure(new ServerCrashProcedure(
-      procExec.getEnvironment(), serverName, shouldSplitWal, false));
+    submitServerCrash(serverName, shouldSplitWal);
   }
 
   /**

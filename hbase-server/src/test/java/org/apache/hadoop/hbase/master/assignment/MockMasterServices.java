@@ -168,9 +168,8 @@ public class MockMasterServices extends MockNoopMasterServices {
     return serverManager;
   }
 
-  // TODO: Remove the above and remove the 2
   @Override
-  public org.apache.hadoop.hbase.master.assignment.AssignmentManager getAssignmentManager2() {
+  public AssignmentManager getAssignmentManager() {
     return assignmentManager;
   }
 

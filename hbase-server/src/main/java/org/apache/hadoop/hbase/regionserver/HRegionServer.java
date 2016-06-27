@@ -2087,6 +2087,7 @@ public class HRegionServer extends HasThread implements
             + " to " + code + ": " + response.getErrorMessage());
           return false;
         }
+        LOG.info("TRANSITION REPORTED " + request);
         return true;
       } catch (ServiceException se) {
         IOException ioe = ProtobufUtil.getRemoteException(se);
@@ -2096,6 +2097,7 @@ public class HRegionServer extends HasThread implements
         }
       }
     }
+    LOG.info("TRANSITION NOT REPORTED " + request);
     return false;
   }
 
