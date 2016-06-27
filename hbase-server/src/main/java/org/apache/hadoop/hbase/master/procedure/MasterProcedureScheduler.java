@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import java.io.IOException;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.HashMap;

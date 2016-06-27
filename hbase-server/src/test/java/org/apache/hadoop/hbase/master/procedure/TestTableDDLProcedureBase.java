@@ -23,6 +23,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HTableDescriptor;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.junit.After;
@@ -60,9 +61,8 @@ public abstract class TestTableDDLProcedureBase {
   @Before
   public void setup() throws Exception {
     resetProcExecutorTestingKillFlag();
-    nonceGroup =
-        MasterProcedureTestingUtility.generateNonceGroup(UTIL.getHBaseCluster().getMaster());
-    nonce = MasterProcedureTestingUtility.generateNonce(UTIL.getHBaseCluster().getMaster());
+    nonceGroup = MasterProcedureTestingUtility.generateNonceGroup(getMaster());
+    nonce = MasterProcedureTestingUtility.generateNonce(getMaster());
   }
 
   @After
@@ -81,6 +81,10 @@ public abstract class TestTableDDLProcedureBase {
   }
 
   protected ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {
-    return UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
+    return getMaster().getMasterProcedureExecutor();
+  }
+
+  protected HMaster getMaster() {
+    return UTIL.getHBaseCluster().getMaster();
   }
 }

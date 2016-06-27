@@ -36,11 +36,11 @@ import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
 import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
-import org.apache.hadoop.hbase.master.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.master.CatalogJanitor;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.RegionState;
-import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
@@ -357,7 +357,7 @@ public class DispatchMergingRegionsProcedure
 
       RegionPlan regionPlan = new RegionPlan(regionsToMerge[1], regionLocation2, regionLocation);
       LOG.info("Moving regions to same server for merge: " + regionPlan.toString());
-      getAssignmentManager(env).balance(regionPlan);
+      getAssignmentManager(env).moveAsync(regionPlan);
       do {
         try {
           Thread.sleep(20);

@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
@@ -65,9 +66,6 @@ public interface MasterServices extends Server {
    * @return Master's instance of the {@link AssignmentManager}
    */
   AssignmentManager getAssignmentManager();
-
-  // TODO: Remove the above and remove the 2
-  org.apache.hadoop.hbase.master.assignment.AssignmentManager getAssignmentManager2();
 
   /**
    * @return Master's filesystem {@link MasterFileSystem} utility class.

@@ -47,7 +47,8 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
-import org.apache.hadoop.hbase.master.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.RegionStates.RegionStateNode;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
@@ -190,10 +191,9 @@ public class RSGroupAdminServer extends RSGroupAdmin {
                 regions.add(el.getKey());
               }
             }
-            for (RegionState state :
-                master.getAssignmentManager().getRegionStates().getRegionsInTransition()) {
-              if (state.getServerName().getHostPort().equals(rs)) {
-                regions.add(state.getRegion());
+            for (RegionStateNode state : master.getAssignmentManager().getRegionsInTransition()) {
+              if (state.getRegionLocation().getHostPort().equals(rs)) {
+                regions.add(state.getRegionInfo());
               }
             }
 
@@ -379,7 +379,7 @@ public class RSGroupAdminServer extends RSGroupAdmin {
         LOG.info("Group balance "+groupName+" starting with plan count: "+plans.size());
         for (RegionPlan plan: plans) {
           LOG.info("balance " + plan);
-          assignmentManager.balance(plan);
+          assignmentManager.moveAsync(plan);
         }
         LOG.info("Group balance "+groupName+" completed after "+
             (System.currentTimeMillis()-startTime)+" seconds");

@@ -295,9 +295,15 @@ public class SplitLogManager {
       } catch (IOException ioe) {
         FileStatus[] files = fs.listStatus(logDir);
         if (files != null && files.length > 0) {
-          LOG.warn("Returning success without actually splitting and "
-              + "deleting all the log files in path " + logDir + ": "
-              + Arrays.toString(files), ioe);
+          if (isMetaRecovery) {
+            LOG.info("Meta Recovery is not splitting or deleting all the log files in path " +
+                logDir + ": " + Arrays.toString(files));
+          } else {
+            LOG.warn("isMetaRecovery=" + isMetaRecovery
+                + " Returning success without actually splitting and "
+                + "deleting all the log files in path " + logDir + ": "
+                + Arrays.toString(files), ioe);
+          }
         } else {
           LOG.warn("Unable to delete log src dir. Ignoring. " + logDir, ioe);
         }
@@ -305,9 +311,10 @@ public class SplitLogManager {
       SplitLogCounters.tot_mgr_log_split_batch_success.incrementAndGet();
     }
     String msg =
-        "finished splitting (more than or equal to) " + totalSize + " bytes in " + batch.installed
-            + " log files in " + logDirs + " in "
-            + (EnvironmentEdgeManager.currentTime() - t) + "ms";
+        "finished splitting isMetaRecovery=" + isMetaRecovery
+        + " (more than or equal to) " + totalSize + " bytes in " + batch.installed
+        + " log files in " + logDirs + " in "
+        + (EnvironmentEdgeManager.currentTime() - t) + "ms";
     status.markComplete(msg);
     LOG.info(msg);
     return totalSize;

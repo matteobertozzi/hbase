@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.master.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
@@ -82,8 +81,7 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
 
     hbfsckExecutorService = new ScheduledThreadPoolExecutor(POOL_SIZE);
 
-    AssignmentManager assignmentManager =
-        TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager();
+    assignmentManager = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager();
     regionStates = assignmentManager.getRegionStates();
 
     connection = (ClusterConnection) TEST_UTIL.getConnection();
@@ -112,7 +110,7 @@ public class TestHBaseFsckTwoRS extends BaseTestHBaseFsck {
   public void testFixAssignmentsWhenMETAinTransition() throws Exception {
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     admin.closeRegion(cluster.getServerHoldingMeta(), HRegionInfo.FIRST_META_REGIONINFO);
-    regionStates.regionOffline(HRegionInfo.FIRST_META_REGIONINFO);
+    assignmentManager.offlineRegion(HRegionInfo.FIRST_META_REGIONINFO);
     new MetaTableLocator().deleteMetaLocation(cluster.getMaster().getZooKeeper());
     assertFalse(regionStates.isRegionOnline(HRegionInfo.FIRST_META_REGIONINFO));
     HBaseFsck hbck = doFsck(conf, true);

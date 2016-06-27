@@ -2992,8 +2992,8 @@ public final class ProtobufUtil {
       backupMasters.add(ProtobufUtil.toServerName(sn));
     }
 
-    Set<RegionState> rit = null;
-    rit = new HashSet<RegionState>(proto.getRegionsInTransitionList().size());
+    List<RegionState> rit = null;
+    rit = new ArrayList<RegionState>(proto.getRegionsInTransitionList().size());
     for (RegionInTransition region : proto.getRegionsInTransitionList()) {
       RegionState value = RegionState.convert(region.getRegionState());
       rit.add(value);

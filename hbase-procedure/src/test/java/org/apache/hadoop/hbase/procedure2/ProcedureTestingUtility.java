@@ -287,20 +287,30 @@ public class ProcedureTestingUtility {
   }
 
   public static <TEnv> void testRecoveryAndDoubleExecution(final ProcedureExecutor<TEnv> procExec,
-      final long procId, final boolean expectFailure, final Runnable customRestart)
+      final long procId, final boolean expectFailure, final Callable<Void> customRestart)
       throws Exception {
     final Procedure proc = procExec.getProcedure(procId);
     waitProcedure(procExec, procId);
     assertEquals(false, procExec.isRunning());
 
-    for (int i = 0; !procExec.isFinished(procId); ++i) {
-      LOG.info("Restart " + i + " exec state: " + proc);
+    int restartCount = 0;
+    while (!procExec.isFinished(procId)) {
+      LOG.info("Restart " + restartCount + " exec state: " + proc);
       if (customRestart != null) {
-        customRestart.run();
+        customRestart.call();
       } else {
         restart(procExec);
       }
       waitProcedure(procExec, procId);
+      restartCount++;
+    }
+
+    if (!procExec.isRunning()) {
+      if (customRestart != null) {
+        customRestart.call();
+      } else {
+        restart(procExec);
+      }
     }
 
     assertEquals(true, procExec.isRunning());

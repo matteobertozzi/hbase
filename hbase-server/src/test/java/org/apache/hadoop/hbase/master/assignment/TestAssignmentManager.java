@@ -115,7 +115,7 @@ public class TestAssignmentManager {
     master = new MockMasterServices(UTIL.getConfiguration());
     rsDispatcher = new MockRSProcedureDispatcher(master);
     master.start(NSERVERS, rsDispatcher);
-    am = master.getAssignmentManager2();
+    am = master.getAssignmentManager();
 
     setUpMeta();
   }

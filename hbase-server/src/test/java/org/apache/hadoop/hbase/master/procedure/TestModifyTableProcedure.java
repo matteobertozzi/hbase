@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ModifyTableState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.Test;
@@ -204,8 +203,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
       new ModifyTableProcedure(procExec.getEnvironment(), htd), nonceGroup, nonce);
 
     // Restart the executor and execute the step twice
-    int numberOfSteps = ModifyTableState.values().length;
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
 
     // Validate descriptor
     HTableDescriptor currentHtd = UTIL.getHBaseAdmin().getTableDescriptor(tableName);
@@ -242,8 +240,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
       new ModifyTableProcedure(procExec.getEnvironment(), htd), nonceGroup, nonce);
 
     // Restart the executor and execute the step twice
-    int numberOfSteps = ModifyTableState.values().length;
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
 
     // Validate descriptor
     HTableDescriptor currentHtd = UTIL.getHBaseAdmin().getTableDescriptor(tableName);
@@ -259,43 +256,26 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout = 60000)
   public void testRollbackAndDoubleExecutionOnline() throws Exception {
-    final TableName tableName = TableName.valueOf("testRollbackAndDoubleExecution");
-    final String familyName = "cf2";
-    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
-
-    // create the table
-    HRegionInfo[] regions = MasterProcedureTestingUtility.createTable(
-      procExec, tableName, null, "cf1");
-
-    ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
-
-    HTableDescriptor htd = new HTableDescriptor(UTIL.getHBaseAdmin().getTableDescriptor(tableName));
-    boolean newCompactionEnableOption = htd.isCompactionEnabled() ? false : true;
-    htd.setCompactionEnabled(newCompactionEnableOption);
-    htd.addFamily(new HColumnDescriptor(familyName));
-
-    // Start the Modify procedure && kill the executor
-    long procId = procExec.submitProcedure(
-      new ModifyTableProcedure(procExec.getEnvironment(), htd), nonceGroup, nonce);
-
-    int numberOfSteps = 1; // failing at pre operation
-    MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
-
-    // cf2 should not be present
-    MasterProcedureTestingUtility.validateTableCreation(UTIL.getHBaseCluster().getMaster(),
-      tableName, regions, "cf1");
+    testRollbackAndDoubleExecution(TableName.valueOf("testRollbackAndDoubleExecution"), false);
   }
+
 
   @Test(timeout = 60000)
   public void testRollbackAndDoubleExecutionOffline() throws Exception {
-    final TableName tableName = TableName.valueOf("testRollbackAndDoubleExecution");
+    testRollbackAndDoubleExecution(TableName.valueOf("testRollbackAndDoubleExecution"), true);
+  }
+
+  private void testRollbackAndDoubleExecution(final TableName tableName, final boolean disableTable)
+      throws Exception {
     final String familyName = "cf2";
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     // create the table
     HRegionInfo[] regions = MasterProcedureTestingUtility.createTable(
       procExec, tableName, null, "cf1");
-    UTIL.getHBaseAdmin().disableTable(tableName);
+    if (disableTable) {
+      UTIL.getHBaseAdmin().disableTable(tableName);
+    }
 
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
@@ -304,14 +284,15 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     boolean newCompactionEnableOption = htd.isCompactionEnabled() ? false : true;
     htd.setCompactionEnabled(newCompactionEnableOption);
     htd.addFamily(new HColumnDescriptor(familyName));
-    htd.setRegionReplication(3);
+    if (disableTable) {
+      htd.setRegionReplication(3);
+    }
 
     // Start the Modify procedure && kill the executor
     long procId = procExec.submitProcedure(
       new ModifyTableProcedure(procExec.getEnvironment(), htd), nonceGroup, nonce);
 
-    // Restart the executor and rollback the step twice
-    int numberOfSteps = 1; // failing at pre operation
+    int numberOfSteps = 0; // failing at pre operation
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
 
     // cf2 should not be present

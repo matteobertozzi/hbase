@@ -55,12 +55,12 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.exceptions.MergeRegionException;
-import org.apache.hadoop.hbase.master.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.RegionState.State;
-import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionStateTransition.TransitionCode;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse;
@@ -174,7 +174,7 @@ public class TestRegionMergeTransactionOnCluster {
     assertTrue(regionStates.isRegionInState(hri, State.MERGED));
 
     // We should not be able to unassign it either
-    am.unassign(hri, null);
+    am.unassign(hri);
     assertFalse("Merged region can't be unassigned",
       regionStates.isRegionInTransition(hri));
     assertTrue(regionStates.isRegionInState(hri, State.MERGED));
@@ -326,12 +326,12 @@ public class TestRegionMergeTransactionOnCluster {
     try {
       // Create table and load data.
       Table table = createTableAndLoadData(MASTER, tableName);
-      RegionStates regionStates = MASTER.getAssignmentManager().getRegionStates();
-      List<HRegionInfo> regions = regionStates.getRegionsOfTable(tableName);
+      AssignmentManager am = MASTER.getAssignmentManager();
+      List<HRegionInfo> regions = am.getRegionStates().getRegionsOfTable(tableName);
       // Fake offline one region
       HRegionInfo a = regions.get(0);
       HRegionInfo b = regions.get(1);
-      regionStates.regionOffline(a);
+      am.offlineRegion(a);
       try {
         // Merge offline region. Region a is offline here
         hbaseAdmin.mergeRegionsSync(a.getEncodedNameAsBytes(), b.getEncodedNameAsBytes(), false);
@@ -551,7 +551,7 @@ public class TestRegionMergeTransactionOnCluster {
       if (enabled.get() && req.getTransition(0).getTransitionCode()
           == TransitionCode.READY_TO_MERGE && !resp.hasErrorMessage()) {
         RegionStates regionStates = myMaster.getAssignmentManager().getRegionStates();
-        for (RegionState regionState: regionStates.getRegionsInTransition()) {
+        for (RegionState regionState: regionStates.getRegionsStateInTransition()) {
           // Find the merging_new region and remove it
           if (regionState.isMergingNew()) {
             regionStates.deleteRegion(regionState.getRegion());

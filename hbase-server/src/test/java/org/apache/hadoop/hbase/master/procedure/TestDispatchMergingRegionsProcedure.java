@@ -234,8 +234,7 @@ public class TestDispatchMergingRegionsProcedure {
         procExec.getEnvironment(), tableName, regionsToMerge, true));
 
     // Restart the executor and execute the step twice
-    int numberOfSteps = DispatchMergingRegionsState.values().length;
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
 
     assertRegionCount(tableName, 2, 1, initCompletedTaskCount);

@@ -22,17 +22,12 @@ import static org.junit.Assert.assertTrue;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.DeleteColumnFamilyState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.Test;
@@ -60,8 +55,7 @@ public class TestDeleteColumnFamilyProcedure extends TestTableDDLProcedureBase {
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
 
-    MasterProcedureTestingUtility.validateColumnFamilyDeletion(UTIL.getHBaseCluster().getMaster(),
-      tableName, cf1);
+    MasterProcedureTestingUtility.validateColumnFamilyDeletion(getMaster(), tableName, cf1);
 
     // Test 2: delete the column family that exists offline
     UTIL.getHBaseAdmin().disableTable(tableName);
@@ -93,8 +87,7 @@ public class TestDeleteColumnFamilyProcedure extends TestTableDDLProcedureBase {
     // First delete should succeed
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
 
-    MasterProcedureTestingUtility.validateColumnFamilyDeletion(UTIL.getHBaseCluster().getMaster(),
-      tableName, cf2);
+    MasterProcedureTestingUtility.validateColumnFamilyDeletion(getMaster(), tableName, cf2);
 
     // delete the column family that does not exist
     long procId2 = procExec.submitProcedure(
@@ -150,8 +143,7 @@ public class TestDeleteColumnFamilyProcedure extends TestTableDDLProcedureBase {
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
-    MasterProcedureTestingUtility.validateColumnFamilyDeletion(UTIL.getHBaseCluster().getMaster(),
-      tableName, cf2);
+    MasterProcedureTestingUtility.validateColumnFamilyDeletion(getMaster(), tableName, cf2);
 
     // Wait the completion and expect not fail - because it is the same proc
     ProcedureTestingUtility.waitProcedure(procExec, procId2);
@@ -185,14 +177,26 @@ public class TestDeleteColumnFamilyProcedure extends TestTableDDLProcedureBase {
 
   @Test(timeout=60000)
   public void testRecoveryAndDoubleExecutionOffline() throws Exception {
-    final TableName tableName = TableName.valueOf("testRecoveryAndDoubleExecutionOffline");
+    testRecoveryAndDoubleExecution(TableName.valueOf("testRecoveryAndDoubleExecutionOffline"),true);
+  }
+
+  @Test(timeout = 60000)
+  public void testRecoveryAndDoubleExecutionOnline() throws Exception {
+    testRecoveryAndDoubleExecution(TableName.valueOf("testRecoveryAndDoubleExecutionOnline"),false);
+  }
+
+  private void testRecoveryAndDoubleExecution(final TableName tableName, final boolean disableTable)
+      throws Exception {
     final String cf4 = "cf4";
 
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     // create the table
     MasterProcedureTestingUtility.createTable(procExec, tableName, null, "f1", "f2", "f3", cf4);
-    UTIL.getHBaseAdmin().disableTable(tableName);
+    if (disableTable) {
+      UTIL.getHBaseAdmin().disableTable(tableName);
+    }
+
     ProcedureTestingUtility.waitNoProcedureRunning(procExec);
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
 
@@ -203,37 +207,9 @@ public class TestDeleteColumnFamilyProcedure extends TestTableDDLProcedureBase {
       nonce);
 
     // Restart the executor and execute the step twice
-    int numberOfSteps = DeleteColumnFamilyState.values().length;
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
 
-    MasterProcedureTestingUtility.validateColumnFamilyDeletion(UTIL.getHBaseCluster().getMaster(),
-      tableName, cf4);
-  }
-
-  @Test(timeout = 60000)
-  public void testRecoveryAndDoubleExecutionOnline() throws Exception {
-    final TableName tableName = TableName.valueOf("testRecoveryAndDoubleExecutionOnline");
-    final String cf5 = "cf5";
-
-    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
-
-    // create the table
-    MasterProcedureTestingUtility.createTable(procExec, tableName, null, "f1", "f2", "f3", cf5);
-    ProcedureTestingUtility.waitNoProcedureRunning(procExec);
-    ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, true);
-
-    // Start the Delete procedure && kill the executor
-    long procId = procExec.submitProcedure(
-      new DeleteColumnFamilyProcedure(procExec.getEnvironment(), tableName, cf5.getBytes()),
-      nonceGroup,
-      nonce);
-
-    // Restart the executor and execute the step twice
-    int numberOfSteps = DeleteColumnFamilyState.values().length;
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
-
-    MasterProcedureTestingUtility.validateColumnFamilyDeletion(UTIL.getHBaseCluster().getMaster(),
-      tableName, cf5);
+    MasterProcedureTestingUtility.validateColumnFamilyDeletion(getMaster(), tableName, cf4);
   }
 
   @Test(timeout = 60000)
@@ -255,10 +231,10 @@ public class TestDeleteColumnFamilyProcedure extends TestTableDDLProcedureBase {
       nonceGroup,
       nonce);
 
-    int numberOfSteps = 1; // failing at pre operation
+    int numberOfSteps = 0; // failing at pre operation
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
 
     MasterProcedureTestingUtility.validateTableCreation(
-      UTIL.getHBaseCluster().getMaster(), tableName, regions, "f1", "f2", "f3", cf5);
+      getMaster(), tableName, regions, "f1", "f2", "f3", cf5);
   }
 }

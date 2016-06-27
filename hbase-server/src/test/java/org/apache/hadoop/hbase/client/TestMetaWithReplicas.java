@@ -445,9 +445,6 @@ public class TestMetaWithReplicas {
     // Create a meta replica (this will be the 4th one) and assign it
     HRegionInfo h = RegionReplicaUtil.getRegionInfoForReplica(
         HRegionInfo.FIRST_META_REGIONINFO, 3);
-    // create in-memory state otherwise master won't assign
-    TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
-             .getRegionStates().createRegionState(h);
     TEST_UTIL.assignRegion(h);
     HBaseFsckRepair.waitUntilAssigned(TEST_UTIL.getHBaseAdmin(), h);
     // check that problem exists
