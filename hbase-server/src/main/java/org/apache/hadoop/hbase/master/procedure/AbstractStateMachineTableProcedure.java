@@ -40,6 +40,7 @@ public abstract class AbstractStateMachineTableProcedure<TState>
   private final ProcedurePrepareLatch syncLatch;
 
   private User user;
+  private boolean hasLock;
 
   protected AbstractStateMachineTableProcedure() {
     // Required by the Procedure framework to create the procedure on replay
@@ -83,6 +84,28 @@ public abstract class AbstractStateMachineTableProcedure<TState>
   @Override
   protected void releaseLock(final MasterProcedureEnv env) {
     env.getProcedureQueue().releaseTableExclusiveLock(this, getTableName());
+  }
+
+  @Override
+  protected boolean doAcquireLock(final MasterProcedureEnv env) {
+    hasLock = acquireLock(env);
+    return hasLock;
+  }
+
+  @Override
+  protected void doReleaseLock(final MasterProcedureEnv env) {
+    releaseLock(env);
+    hasLock = false;
+  }
+
+  @Override
+  protected boolean holdLock(final MasterProcedureEnv env) {
+    return true;
+  }
+
+  @Override
+  protected boolean hasLock(final MasterProcedureEnv env) {
+    return hasLock;
   }
 
   protected User getUser() {

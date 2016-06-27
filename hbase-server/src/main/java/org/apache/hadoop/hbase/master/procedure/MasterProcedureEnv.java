@@ -120,7 +120,7 @@ public class MasterProcedureEnv implements ConfigurationObserver {
   }
 
   public AssignmentManager getAssignmentManager() {
-    return master.getAssignmentManager2();
+    return master.getAssignmentManager();
   }
 
   public MasterCoprocessorHost getMasterCoprocessorHost() {

@@ -85,8 +85,7 @@ public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
 
     // First delete should succeed
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
-    MasterProcedureTestingUtility.validateTableDeletion(
-      UTIL.getHBaseCluster().getMaster(), tableName);
+    MasterProcedureTestingUtility.validateTableDeletion(getMaster(), tableName);
 
     // Second delete should fail with TableNotFound
     ProcedureInfo result = procExec.getResult(procId2);
@@ -117,8 +116,7 @@ public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
 
     // First delete should succeed
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
-    MasterProcedureTestingUtility.validateTableDeletion(
-      UTIL.getHBaseCluster().getMaster(), tableName);
+    MasterProcedureTestingUtility.validateTableDeletion(getMaster(), tableName);
 
     // Second delete should not fail, because it is the same delete
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId2);
@@ -151,8 +149,7 @@ public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
     long procId = ProcedureTestingUtility.submitAndWait(procExec,
       new DeleteTableProcedure(procExec.getEnvironment(), tableName));
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
-    MasterProcedureTestingUtility.validateTableDeletion(
-      UTIL.getHBaseCluster().getMaster(), tableName);
+    MasterProcedureTestingUtility.validateTableDeletion(getMaster(), tableName);
   }
 
   @Test(timeout=60000)
@@ -174,11 +171,8 @@ public class TestDeleteTableProcedure extends TestTableDDLProcedureBase {
       new DeleteTableProcedure(procExec.getEnvironment(), tableName), nonceGroup, nonce);
 
     // Restart the executor and execute the step twice
-    // NOTE: the 6 (number of DeleteTableState steps) is hardcoded,
-    //       so you have to look at this test at least once when you add a new step.
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, 6);
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
 
-    MasterProcedureTestingUtility.validateTableDeletion(
-      UTIL.getHBaseCluster().getMaster(), tableName);
+    MasterProcedureTestingUtility.validateTableDeletion(getMaster(), tableName);
   }
 }

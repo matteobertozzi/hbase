@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.store.wal.WALProcedureStore;
@@ -116,7 +117,7 @@ public class TestMasterFailoverWithProcedures {
     HRegionInfo[] regions = ModifyRegionUtils.createHRegionInfos(htd, splitKeys);
     long procId = procExec.submitProcedure(
         new CreateTableProcedure(procExec.getEnvironment(), htd, regions));
-    testRecoveryAndDoubleExecution(UTIL, procId, step, CreateTableState.values());
+    testRecoveryAndDoubleExecution(UTIL, procId, step);
 
     MasterProcedureTestingUtility.validateTableCreation(
         UTIL.getHBaseCluster().getMaster(), tableName, regions, "f1", "f2");
@@ -154,7 +155,7 @@ public class TestMasterFailoverWithProcedures {
     // Start the Delete procedure && kill the executor
     long procId = procExec.submitProcedure(
         new DeleteTableProcedure(procExec.getEnvironment(), tableName));
-    testRecoveryAndDoubleExecution(UTIL, procId, step, DeleteTableState.values());
+    testRecoveryAndDoubleExecution(UTIL, procId, step);
 
     MasterProcedureTestingUtility.validateTableDeletion(
         UTIL.getHBaseCluster().getMaster(), tableName);
@@ -197,7 +198,7 @@ public class TestMasterFailoverWithProcedures {
     // Start the Truncate procedure && kill the executor
     long procId = procExec.submitProcedure(
         new TruncateTableProcedure(procExec.getEnvironment(), tableName, preserveSplits));
-    testRecoveryAndDoubleExecution(UTIL, procId, step, TruncateTableState.values());
+    testRecoveryAndDoubleExecution(UTIL, procId, step);
 
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
     UTIL.waitUntilAllRegionsAssigned(tableName);
@@ -251,7 +252,7 @@ public class TestMasterFailoverWithProcedures {
     // Start the Delete procedure && kill the executor
     long procId = procExec.submitProcedure(
         new DisableTableProcedure(procExec.getEnvironment(), tableName, false));
-    testRecoveryAndDoubleExecution(UTIL, procId, step, DisableTableState.values());
+    testRecoveryAndDoubleExecution(UTIL, procId, step);
 
     MasterProcedureTestingUtility.validateTableIsDisabled(
         UTIL.getHBaseCluster().getMaster(), tableName);
@@ -288,7 +289,7 @@ public class TestMasterFailoverWithProcedures {
     // Start the Delete procedure && kill the executor
     long procId = procExec.submitProcedure(
         new EnableTableProcedure(procExec.getEnvironment(), tableName, false));
-    testRecoveryAndDoubleExecution(UTIL, procId, step, EnableTableState.values());
+    testRecoveryAndDoubleExecution(UTIL, procId, step);
 
     MasterProcedureTestingUtility.validateTableIsEnabled(
         UTIL.getHBaseCluster().getMaster(), tableName);
@@ -297,16 +298,17 @@ public class TestMasterFailoverWithProcedures {
   // ==========================================================================
   //  Test Helpers
   // ==========================================================================
-  public static <TState> void testRecoveryAndDoubleExecution(final HBaseTestingUtility testUtil,
-      final long procId, final int lastStepBeforeFailover, TState[] states) throws Exception {
+  public static void testRecoveryAndDoubleExecution(final HBaseTestingUtility testUtil,
+      final long procId, final int lastStepBeforeFailover) throws Exception {
     ProcedureExecutor<MasterProcedureEnv> procExec =
         testUtil.getHBaseCluster().getMaster().getMasterProcedureExecutor();
     ProcedureTestingUtility.waitProcedure(procExec, procId);
 
+    final Procedure proc = procExec.getProcedure(procId);
     for (int i = 0; i < lastStepBeforeFailover; ++i) {
-      LOG.info("Restart "+ i +" exec state: " + states[i]);
+      LOG.info("Restart "+ i +" exec state: " + proc);
       ProcedureTestingUtility.assertProcNotYetCompleted(procExec, procId);
-      ProcedureTestingUtility.restart(procExec);
+      MasterProcedureTestingUtility.restartMasterProcedureExecutor(procExec);
       ProcedureTestingUtility.waitProcedure(procExec, procId);
     }
     ProcedureTestingUtility.assertProcNotYetCompleted(procExec, procId);

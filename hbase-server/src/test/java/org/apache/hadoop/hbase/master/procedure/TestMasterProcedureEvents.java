@@ -53,9 +53,6 @@ public class TestMasterProcedureEvents {
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
-  private static long nonceGroup = HConstants.NO_NONCE;
-  private static long nonce = HConstants.NO_NONCE;
-
   private static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
     conf.setBoolean(WALProcedureStore.USE_HSYNC_CONF_KEY, false);
@@ -110,7 +107,7 @@ public class TestMasterProcedureEvents {
     ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();
 
     while (!master.isServerCrashProcessingEnabled() || !master.isInitialized() ||
-        master.getAssignmentManager().getRegionStates().isRegionsInTransition()) {
+        master.getAssignmentManager().hasRegionsInTransition()) {
       Thread.sleep(25);
     }
 
@@ -144,7 +141,7 @@ public class TestMasterProcedureEvents {
   private void testProcedureEventWaitWake(final HMaster master, final ProcedureEvent event,
       final Procedure proc) throws Exception {
     final ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();
-    final MasterProcedureScheduler procSched = procExec.getEnvironment().getProcedureQueue();
+    final MasterProcedureScheduler procSched = procExec.getEnvironment().getProcedureScheduler();
 
     final long startPollCalls = procSched.getPollCalls();
     final long startNullPollCalls = procSched.getNullPollCalls();

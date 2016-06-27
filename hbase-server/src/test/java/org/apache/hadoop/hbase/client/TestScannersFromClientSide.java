@@ -36,9 +36,9 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.filter.ColumnPrefixFilter;
 import org.apache.hadoop.hbase.filter.ColumnRangeFilter;
+import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.RegionState.State;
-import org.apache.hadoop.hbase.master.RegionStates;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -623,11 +623,8 @@ public class TestScannersFromClientSide {
     }
 
     // Now open the region again.
-    HMaster master = cluster.getMaster();
-    RegionStates states = master.getAssignmentManager().getRegionStates();
-    states.regionOffline(hri);
-    states.updateRegionState(hri, State.OPENING);
-    ProtobufUtil.openRegion(null, rs.getRSRpcServices(), rs.getServerName(), hri);
+    cluster.getMaster().getAssignmentManager().reopen(hri);
+
     startTime = EnvironmentEdgeManager.currentTime();
     while (true) {
       if (rs.getOnlineRegion(regionName) != null) {

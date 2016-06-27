@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.DisableTableState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -52,8 +51,7 @@ public class TestDisableTableProcedure extends TestTableDDLProcedureBase {
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
-    MasterProcedureTestingUtility.validateTableIsDisabled(UTIL.getHBaseCluster().getMaster(),
-      tableName);
+    MasterProcedureTestingUtility.validateTableIsDisabled(getMaster(), tableName);
   }
 
   @Test(timeout = 60000)
@@ -69,8 +67,7 @@ public class TestDisableTableProcedure extends TestTableDDLProcedureBase {
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
-    MasterProcedureTestingUtility.validateTableIsDisabled(UTIL.getHBaseCluster().getMaster(),
-      tableName);
+    MasterProcedureTestingUtility.validateTableIsDisabled(getMaster(), tableName);
 
     // Disable the table again - expect failure
     long procId2 = procExec.submitProcedure(new DisableTableProcedure(
@@ -102,8 +99,7 @@ public class TestDisableTableProcedure extends TestTableDDLProcedureBase {
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId4);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId4);
-    MasterProcedureTestingUtility.validateTableIsDisabled(UTIL.getHBaseCluster().getMaster(),
-      tableName);
+    MasterProcedureTestingUtility.validateTableIsDisabled(getMaster(), tableName);
   }
 
   @Test(timeout = 60000)
@@ -121,8 +117,7 @@ public class TestDisableTableProcedure extends TestTableDDLProcedureBase {
     // Wait the completion
     ProcedureTestingUtility.waitProcedure(procExec, procId1);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
-    MasterProcedureTestingUtility.validateTableIsDisabled(UTIL.getHBaseCluster().getMaster(),
-      tableName);
+    MasterProcedureTestingUtility.validateTableIsDisabled(getMaster(), tableName);
 
     ProcedureTestingUtility.waitProcedure(procExec, procId2);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId2);
@@ -146,9 +141,8 @@ public class TestDisableTableProcedure extends TestTableDDLProcedureBase {
       new DisableTableProcedure(procExec.getEnvironment(), tableName, false), nonceGroup, nonce);
 
     // Restart the executor and execute the step twice
-    int numberOfSteps = DisableTableState.values().length;
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
-    MasterProcedureTestingUtility.validateTableIsDisabled(UTIL.getHBaseCluster().getMaster(),
-      tableName);
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
+
+    MasterProcedureTestingUtility.validateTableIsDisabled(getMaster(), tableName);
   }
 }

@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ModifyTableState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.Test;
@@ -204,8 +203,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
       new ModifyTableProcedure(procExec.getEnvironment(), htd), nonceGroup, nonce);
 
     // Restart the executor and execute the step twice
-    int numberOfSteps = ModifyTableState.values().length;
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
 
     // Validate descriptor
     HTableDescriptor currentHtd = UTIL.getHBaseAdmin().getTableDescriptor(tableName);
@@ -242,8 +240,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
       new ModifyTableProcedure(procExec.getEnvironment(), htd), nonceGroup, nonce);
 
     // Restart the executor and execute the step twice
-    int numberOfSteps = ModifyTableState.values().length;
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
 
     // Validate descriptor
     HTableDescriptor currentHtd = UTIL.getHBaseAdmin().getTableDescriptor(tableName);
@@ -278,7 +275,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     long procId = procExec.submitProcedure(
       new ModifyTableProcedure(procExec.getEnvironment(), htd), nonceGroup, nonce);
 
-    int numberOfSteps = 1; // failing at pre operation
+    int numberOfSteps = 0; // failing at pre operation
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
 
     // cf2 should not be present
@@ -311,7 +308,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
       new ModifyTableProcedure(procExec.getEnvironment(), htd), nonceGroup, nonce);
 
     // Restart the executor and rollback the step twice
-    int numberOfSteps = 1; // failing at pre operation
+    int numberOfSteps = 0; // failing at pre operation
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
 
     // cf2 should not be present

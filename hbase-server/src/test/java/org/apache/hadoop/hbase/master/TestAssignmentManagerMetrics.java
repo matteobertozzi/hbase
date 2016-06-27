@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -64,7 +65,7 @@ public class TestAssignmentManagerMetrics {
     conf.setBoolean("hbase.table.sanity.checks", false);
 
     // set RIT stuck warning threshold to a small value
-    conf.setInt(HConstants.METRICS_RIT_STUCK_WARNING_THRESHOLD, 20);
+    conf.setInt(AssignmentManager.METRICS_RIT_STUCK_WARNING_THRESHOLD, 20);
 
     // set msgInterval to 1 second
     conf.setInt("hbase.regionserver.msginterval", msgInterval);

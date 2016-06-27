@@ -20,6 +20,8 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.Callable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.TreeSet;
 
@@ -43,8 +45,12 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.MasterMetaBootstrap;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.TableStateManager;
+import org.apache.hadoop.hbase.monitoring.TaskMonitor;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
@@ -57,10 +63,49 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-public class MasterProcedureTestingUtility {
+public final class MasterProcedureTestingUtility {
   private static final Log LOG = LogFactory.getLog(MasterProcedureTestingUtility.class);
 
-  private MasterProcedureTestingUtility() {
+  private MasterProcedureTestingUtility() { }
+
+  public static void restartMasterProcedureExecutor(ProcedureExecutor<MasterProcedureEnv> procExec)
+      throws Exception {
+    final MasterProcedureEnv env = procExec.getEnvironment();
+    final HMaster master = (HMaster)env.getMasterServices();
+    ProcedureTestingUtility.restart(procExec,
+      // stop services
+      new Callable<Void>() {
+        @Override
+        public Void call() throws Exception {
+          final AssignmentManager am = env.getAssignmentManager();
+          // try to simulate a master restart by removing the ServerManager states about seqIDs
+          for (RegionState regionState: am.getRegionStates().getRegionStates()) {
+            env.getMasterServices().getServerManager().removeRegion(regionState.getRegion());
+          }
+          am.stop();
+          master.setInitialized(false);
+          return null;
+        }
+      },
+      // restart services
+      new Callable<Void>() {
+        @Override
+        public Void call() throws Exception {
+          final AssignmentManager am = env.getAssignmentManager();
+          am.start();
+          if (true) {
+            MasterMetaBootstrap metaBootstrap = new MasterMetaBootstrap(master,
+                TaskMonitor.get().createStatus("meta"));
+            metaBootstrap.splitMetaLogsBeforeAssignment();
+            metaBootstrap.assignMeta();
+            metaBootstrap.processDeadServers();
+          }
+          am.joinCluster();
+          master.setInitialized(true);
+          return null;
+        }
+      },
+      true);
   }
 
   // ==========================================================================
@@ -296,6 +341,9 @@ public class MasterProcedureTestingUtility {
     return put;
   }
 
+  // ==========================================================================
+  //  Procedure Helpers
+  // ==========================================================================
   public static long generateNonceGroup(final HMaster master) {
     return master.getClusterConnection().getNonceGenerator().getNonceGroup();
   }
@@ -319,13 +367,6 @@ public class MasterProcedureTestingUtility {
    * finish.
    * @see #testRecoveryAndDoubleExecution(ProcedureExecutor, long)
    */
-  public static void testRecoveryAndDoubleExecution(
-      final ProcedureExecutor<MasterProcedureEnv> procExec, final long procId,
-      final int numSteps) throws Exception {
-    testRecoveryAndDoubleExecution(procExec, procId, numSteps, true);
-    ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
-  }
-
   private static void testRecoveryAndDoubleExecution(
       final ProcedureExecutor<MasterProcedureEnv> procExec, final long procId,
       final int numSteps, final boolean expectExecRunning) throws Exception {
@@ -340,7 +381,7 @@ public class MasterProcedureTestingUtility {
     for (int i = 0; i < numSteps; ++i) {
       LOG.info("Restart " + i + " exec state: " + proc);
       ProcedureTestingUtility.assertProcNotYetCompleted(procExec, procId);
-      ProcedureTestingUtility.restart(procExec);
+      restartMasterProcedureExecutor(procExec);
       ProcedureTestingUtility.waitProcedure(procExec, procId);
     }
 
@@ -368,11 +409,13 @@ public class MasterProcedureTestingUtility {
     final Procedure proc = procExec.getProcedure(procId);
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     assertEquals(false, procExec.isRunning());
+
     for (int i = 0; !procExec.isFinished(procId); ++i) {
       LOG.info("Restart " + i + " exec state: " + proc);
-      ProcedureTestingUtility.restart(procExec);
+      restartMasterProcedureExecutor(procExec);
       ProcedureTestingUtility.waitProcedure(procExec, procId);
     }
+
     assertEquals(true, procExec.isRunning());
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
   }
@@ -404,7 +447,7 @@ public class MasterProcedureTestingUtility {
       for (int i = 0; !procExec.isFinished(procId); ++i) {
         LOG.info("Restart " + i + " rollback state: " + proc);
         ProcedureTestingUtility.assertProcNotYetCompleted(procExec, procId);
-        ProcedureTestingUtility.restart(procExec);
+        restartMasterProcedureExecutor(procExec);
         ProcedureTestingUtility.waitProcedure(procExec, procId);
       }
     } finally {
@@ -449,7 +492,7 @@ public class MasterProcedureTestingUtility {
     try {
       ProcedureTestingUtility.assertProcNotYetCompleted(procExec, procId);
       LOG.info("Restart and rollback procId=" + procId);
-      ProcedureTestingUtility.restart(procExec);
+      restartMasterProcedureExecutor(procExec);
       ProcedureTestingUtility.waitProcedure(procExec, procId);
     } finally {
       assertTrue(procExec.unregisterListener(abortListener));

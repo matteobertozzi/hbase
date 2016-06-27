@@ -1069,10 +1069,6 @@ public final class HConstants {
   public static final String WAL_STORAGE_POLICY = "hbase.wal.storage.policy";
   public static final String DEFAULT_WAL_STORAGE_POLICY = "NONE";
 
-  /** Region in Transition metrics threshold time */
-  public static final String METRICS_RIT_STUCK_WARNING_THRESHOLD =
-      "hbase.metrics.rit.stuck.warning.threshold";
-
   public static final String LOAD_BALANCER_SLOP_KEY = "hbase.regions.slop";
 
   /** delimiter used between portions of a region name */
@@ -1307,7 +1303,7 @@ public final class HConstants {
 
   public static final String HBASE_CANARY_WRITE_TABLE_CHECK_PERIOD_KEY =
       "hbase.canary.write.table.check.period";
-  
+
   public static final String HBASE_CANARY_READ_RAW_SCAN_KEY = "hbase.canary.read.raw.enabled";
 
   /**

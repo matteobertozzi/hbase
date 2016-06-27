@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.ModifyColumnFamilyState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.Test;
@@ -128,8 +127,7 @@ public class TestModifyColumnFamilyProcedure extends TestTableDDLProcedureBase {
       nonce);
 
     // Restart the executor and execute the step twice
-    int numberOfSteps = ModifyColumnFamilyState.values().length;
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
 
     MasterProcedureTestingUtility.validateColumnFamilyModification(UTIL.getHBaseCluster()
         .getMaster(), tableName, cf3, columnDescriptor);
@@ -158,8 +156,7 @@ public class TestModifyColumnFamilyProcedure extends TestTableDDLProcedureBase {
       nonce);
 
     // Restart the executor and execute the step twice
-    int numberOfSteps = ModifyColumnFamilyState.values().length;
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
 
     MasterProcedureTestingUtility.validateColumnFamilyModification(UTIL.getHBaseCluster()
         .getMaster(), tableName, cf4, columnDescriptor);
@@ -187,7 +184,7 @@ public class TestModifyColumnFamilyProcedure extends TestTableDDLProcedureBase {
       nonceGroup,
       nonce);
 
-    int numberOfSteps = 1; // failing at pre operation
+    int numberOfSteps = 0; // failing at pre operation
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
   }
 }

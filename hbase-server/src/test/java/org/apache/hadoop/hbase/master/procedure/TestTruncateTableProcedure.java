@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TruncateTableState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -117,8 +116,7 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
     } else {
       assertEquals(1, regions.length);
     }
-    MasterProcedureTestingUtility.validateTableCreation(
-      UTIL.getHBaseCluster().getMaster(), tableName, regions, families);
+    MasterProcedureTestingUtility.validateTableCreation(getMaster(), tableName, regions, families);
 
     // verify that there are no rows in the table
     assertEquals(0, UTIL.countRows(tableName));
@@ -169,9 +167,7 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
       nonce);
 
     // Restart the executor and execute the step twice
-    // NOTE: the 7 (number of TruncateTableState steps) is hardcoded,
-    //       so you have to look at this test at least once when you add a new step.
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, 7);
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
 
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
     UTIL.waitUntilAllRegionsAssigned(tableName);
@@ -183,8 +179,7 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
     } else {
       assertEquals(1, regions.length);
     }
-    MasterProcedureTestingUtility.validateTableCreation(
-      UTIL.getHBaseCluster().getMaster(), tableName, regions, families);
+    MasterProcedureTestingUtility.validateTableCreation(getMaster(), tableName, regions, families);
 
     // verify that there are no rows in the table
     assertEquals(0, UTIL.countRows(tableName));
