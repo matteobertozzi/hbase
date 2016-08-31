@@ -21,7 +21,6 @@ package org.apache.hadoop.hbase.master;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 
 public class MetricsAssignmentManager {
-
   private final MetricsAssignmentManagerSource assignmentManagerSource;
 
   public MetricsAssignmentManager() {
@@ -33,19 +32,11 @@ public class MetricsAssignmentManager {
     return assignmentManagerSource;
   }
 
-  public void updateAssignmentTime(long time) {
-    assignmentManagerSource.updateAssignmentTime(time);
-  }
-
-  public void updateBulkAssignTime(long time) {
-    assignmentManagerSource.updateBulkAssignTime(time);
-  }
-
   /**
    * set new value for number of regions in transition.
    * @param ritCount
    */
-  public void updateRITCount(int ritCount) {
+  public void updateRITCount(final int ritCount) {
     assignmentManagerSource.setRIT(ritCount);
   }
 
@@ -54,14 +45,31 @@ public class MetricsAssignmentManager {
    * as defined by the property rit.metrics.threshold.time.
    * @param ritCountOverThreshold
    */
-  public void updateRITCountOverThreshold(int ritCountOverThreshold) {
+  public void updateRITCountOverThreshold(final int ritCountOverThreshold) {
     assignmentManagerSource.setRITCountOverThreshold(ritCountOverThreshold);
   }
+
   /**
    * update the timestamp for oldest region in transition metrics.
    * @param timestamp
    */
-  public void updateRITOldestAge(long timestamp) {
+  public void updateRITOldestAge(final long timestamp) {
     assignmentManagerSource.setRITOldestAge(timestamp);
+  }
+
+  public void updateAssignTime(final long time) {
+    assignmentManagerSource.updateAssignTime(time);
+  }
+
+  public void updateUnassignTime(final long time) {
+    assignmentManagerSource.updateUnassignTime(time);
+  }
+
+  public void updateTransitionReportTime(final long time) {
+    assignmentManagerSource.updateTransitionReportTime(time);
+  }
+
+  public void updateOnlineReportTime(final long time) {
+    assignmentManagerSource.updateOnlineReportTime(time);
   }
 }
