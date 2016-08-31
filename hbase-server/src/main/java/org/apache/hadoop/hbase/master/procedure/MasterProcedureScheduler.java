@@ -478,7 +478,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       if (regionEventMap == null) {
         regionEventMap = new HashMap<HRegionInfo, RegionEvent>();
       }
-      RegionEvent event = regionEventMap.get(regionInfo);
+      RegionEvent event = regionEventMap.get(regionInfo.getEncodedName());
       if (event == null) {
         event = new RegionEvent(regionInfo);
         regionEventMap.put(regionInfo, event);

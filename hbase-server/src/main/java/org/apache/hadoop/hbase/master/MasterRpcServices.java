@@ -244,7 +244,9 @@ public class MasterRpcServices extends RSRpcServices
       ServerName serverName = ProtobufUtil.toServerName(request.getServer());
 
       ServerLoad oldLoad = master.getServerManager().getLoad(serverName);
-      master.getServerManager().regionServerReport(serverName, new ServerLoad(sl));
+      ServerLoad newLoad = new ServerLoad(sl);
+      master.getServerManager().regionServerReport(serverName, newLoad);
+      master.getAssignmentManager2().reportOnlineRegions(serverName, newLoad.getRegionsLoad().keySet());
       LOG.info(serverName + " REPORT VERSION " + VersionInfoUtil.getCurrentClientVersionNumber());
 
       if (sl != null && master.metricsMaster != null) {
@@ -1318,6 +1320,9 @@ public class MasterRpcServices extends RSRpcServices
       ReportRegionStateTransitionRequest req) throws ServiceException {
     try {
       master.checkServiceStarted();
+
+      master.getAssignmentManager2().reportRegionStateTransition(req);
+
       RegionStateTransition rt = req.getTransition(0);
       RegionStates regionStates = master.getAssignmentManager().getRegionStates();
       for (RegionInfo ri : rt.getRegionInfoList())  { 

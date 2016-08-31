@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcChannel;
+import org.apache.hadoop.hbase.master.RegionState.State;
 import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos.RegionSpecifier;
@@ -1719,6 +1720,8 @@ public class MetaTableAccessor {
 
       //Put for parent
       Put putParent = makePutFromRegionInfo(copyOfParent);
+      putParent.addImmutable(getCatalogFamily(), getStateColumn(),
+        Bytes.toBytes(State.SPLIT.name()));
       addDaughtersToPut(putParent, splitA, splitB);
 
       //Puts for daughters
@@ -2051,7 +2054,7 @@ public class MetaTableAccessor {
       + Bytes.toStringBinary(HConstants.MERGEB_QUALIFIER));
   }
 
-  private static Put addRegionInfo(final Put p, final HRegionInfo hri)
+  public static Put addRegionInfo(final Put p, final HRegionInfo hri)
     throws IOException {
     p.addImmutable(getCatalogFamily(), HConstants.REGIONINFO_QUALIFIER,
       hri.toByteArray());
