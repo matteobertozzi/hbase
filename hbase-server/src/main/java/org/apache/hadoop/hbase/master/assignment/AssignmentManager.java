@@ -604,7 +604,7 @@ public class AssignmentManager implements ServerListener {
       final ReportRegionStateTransitionRequest req) throws PleaseHoldException {
     final ReportRegionStateTransitionResponse.Builder builder =
         ReportRegionStateTransitionResponse.newBuilder();
-
+    final long startTime = EnvironmentEdgeManager.currentTime();
     final ServerName serverName = ProtobufUtil.toServerName(req.getServer());
     try {
       for (RegionStateTransition transition: req.getTransitionList()) {
@@ -650,6 +650,7 @@ public class AssignmentManager implements ServerListener {
       LOG.warn("failed to transition: " + e.getMessage());
       builder.setErrorMessage("failed to transition: " + e.getMessage());
     }
+    metrics.updateTransitionReportTime(EnvironmentEdgeManager.currentTime() - startTime);
     return builder.build();
   }
 
@@ -752,6 +753,7 @@ public class AssignmentManager implements ServerListener {
       final int versionNumber, final Set<byte[]> regionNames) {
     if (!isRunning()) return;
 
+    final long startTime = EnvironmentEdgeManager.currentTime();
     final ServerStateNode serverNode = regionStateMap.getOrCreateServer(serverName);
     LOG.warn("Report ONLINE REGIONS server=" + serverName + " region=" + regionNames.size() +
       " isMetaLoaded=" + isMetaLoaded());
@@ -778,6 +780,9 @@ public class AssignmentManager implements ServerListener {
 
     // wake report event
     wakeServerReportEvent(serverNode);
+
+    // update metrics
+    metrics.updateOnlineReportTime(EnvironmentEdgeManager.currentTime() - startTime);
   }
 
   public void checkOnlineRegionsReportForMeta(final ServerStateNode serverNode,
@@ -1241,6 +1246,9 @@ public class AssignmentManager implements ServerListener {
       regionStateStore.updateRegionLocation(regionNode.getRegionInfo(), State.OPENING,
         regionNode.getRegionLocation(), regionNode.getLastHost(), HConstants.NO_SEQNUM);
     }
+
+    // update the operation count metrics
+    metrics.incrementOperationCounter();
   }
 
   public void markRegionAsOpened(final RegionStateNode regionNode) throws IOException {
@@ -1263,6 +1271,11 @@ public class AssignmentManager implements ServerListener {
         regionNode.getRegionLocation(), regionNode.getLastHost(), regionNode.getOpenSeqNum());
 
       sendRegionOpenedNotification(hri, regionNode.getRegionLocation());
+
+      // update assignment metrics
+      if (regionNode.getProcedure() != null) {
+        metrics.updateAssignTime(regionNode.getProcedure().elapsedTime());
+      }
     }
   }
 
@@ -1283,6 +1296,9 @@ public class AssignmentManager implements ServerListener {
       regionStateStore.updateRegionLocation(regionNode.getRegionInfo(), State.CLOSING,
         regionNode.getRegionLocation(), regionNode.getLastHost(), HConstants.NO_SEQNUM);
     }
+
+    // update the operation count metrics
+    metrics.incrementOperationCounter();
   }
 
   public void markRegionAsClosed(final RegionStateNode regionNode) throws IOException {
@@ -1299,6 +1315,11 @@ public class AssignmentManager implements ServerListener {
         regionNode.getRegionLocation(), regionNode.getLastHost(), HConstants.NO_SEQNUM);
 
       sendRegionClosedNotification(hri);
+
+      // update assignment metrics
+      if (regionNode.getProcedure() != null) {
+        metrics.updateUnassignTime(regionNode.getProcedure().elapsedTime());
+      }
     }
   }
 
