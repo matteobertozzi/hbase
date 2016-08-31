@@ -327,7 +327,8 @@ public class ServerManager {
     }
   }
 
-  void regionServerReport(ServerName sn,
+  @VisibleForTesting
+  public void regionServerReport(ServerName sn,
       ServerLoad sl) throws YouAreDeadException {
     checkIsDead(sn, "REPORT");
     if (null == this.onlineServers.replace(sn, sl)) {
@@ -949,7 +950,7 @@ public class ServerManager {
     * @throws IOException
     * @throws RetriesExhaustedException wrapping a ConnectException if failed
     */
-  private AdminService.BlockingInterface getRsAdmin(final ServerName sn)
+  public AdminService.BlockingInterface getRsAdmin(final ServerName sn)
   throws IOException {
     AdminService.BlockingInterface admin = this.rsAdmins.get(sn);
     if (admin == null) {

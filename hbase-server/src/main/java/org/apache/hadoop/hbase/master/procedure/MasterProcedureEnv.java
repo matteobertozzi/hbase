@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterServices;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
@@ -118,6 +119,10 @@ public class MasterProcedureEnv implements ConfigurationObserver {
     return master.getConfiguration();
   }
 
+  public AssignmentManager getAssignmentManager() {
+    return master.getAssignmentManager2();
+  }
+
   public MasterCoprocessorHost getMasterCoprocessorHost() {
     return master.getMasterCoprocessorHost();
   }
@@ -144,7 +149,15 @@ public class MasterProcedureEnv implements ConfigurationObserver {
   }
 
   public boolean waitServerCrashProcessingEnabled(Procedure proc) {
-    return procSched.waitEvent(((HMaster)master).getServerCrashProcessingEnabledEvent(), proc);
+    if (master instanceof HMaster) {
+      return procSched.waitEvent(((HMaster)master).getServerCrashProcessingEnabledEvent(), proc);
+    }
+    LOG.warn("server crash processing event on " + master);
+    return false;
+  }
+
+  public boolean waitFailoverCleanup(Procedure proc) {
+    return procSched.waitEvent(master.getAssignmentManager().getFailoverCleanupEvent(), proc);
   }
 
   public void wake(ProcedureEvent event) {

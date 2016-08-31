@@ -281,6 +281,8 @@ public class HMaster extends HRegionServer implements MasterServices {
   // manager of assignment nodes in zookeeper
   private AssignmentManager assignmentManager;
 
+  org.apache.hadoop.hbase.master.assignment.AssignmentManager assignmentManager2;
+
   // buffer for "fatal error" notices from region servers
   // in the cluster. This is only used for assisting
   // operations/debugging.
@@ -616,6 +618,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.assignmentManager = new AssignmentManager(this, serverManager,
       this.balancer, this.service, this.metricsMaster,
       this.tableLockManager, tableStateManager);
+    this.assignmentManager2 = new org.apache.hadoop.hbase.master.assignment.AssignmentManager(this);
 
     this.regionServerTracker = new RegionServerTracker(zooKeeper, this, this.serverManager);
     this.regionServerTracker.start();
@@ -1051,10 +1054,12 @@ public class HMaster extends HRegionServer implements MasterServices {
     if (procedureExecutor != null) {
       configurationManager.deregisterObserver(procedureExecutor.getEnvironment());
       procedureExecutor.stop();
+      procedureExecutor = null;
     }
 
     if (procedureStore != null) {
       procedureStore.stop(isAborted());
+      procedureStore = null;
     }
   }
 
@@ -2254,6 +2259,11 @@ public class HMaster extends HRegionServer implements MasterServices {
   public AssignmentManager getAssignmentManager() {
     return this.assignmentManager;
   }
+
+  public org.apache.hadoop.hbase.master.assignment.AssignmentManager getAssignmentManager2() {
+    return assignmentManager2;
+  }
+
 
   @Override
   public CatalogJanitor getCatalogJanitor() {
