@@ -154,7 +154,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer, LoadBalanc
             }
           }
         }
-        groupClusterLoad.put(TableName.valueOf(HConstants.ENSEMBLE_TABLE_NAME), groupClusterState);
+        groupClusterLoad.put(HConstants.ENSEMBLE_TABLE_NAME, groupClusterState);
         this.internalBalancer.setClusterLoad(groupClusterLoad);
         List<RegionPlan> groupPlans = this.internalBalancer
             .balanceCluster(groupClusterState);

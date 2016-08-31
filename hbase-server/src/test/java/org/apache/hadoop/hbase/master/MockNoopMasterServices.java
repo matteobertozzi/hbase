@@ -83,6 +83,11 @@ public class MockNoopMasterServices implements MasterServices, Server {
   }
 
   @Override
+  public org.apache.hadoop.hbase.master.assignment.AssignmentManager getAssignmentManager2() {
+    return null;
+  }
+
+  @Override
   public ExecutorService getExecutorService() {
     return null;
   }

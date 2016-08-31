@@ -40,4 +40,19 @@ public interface AssignmentListener {
    * @param regionInfo The closed region.
    */
   void regionClosed(final HRegionInfo regionInfo);
+
+  /**
+   * @param parent the region that got split (region removed)
+   * @param hriA one of the regions created on split (region added)
+   * @param hriA the other region created on split (region added)
+   */
+  void regionSplitted(final HRegionInfo parent, final HRegionInfo hriA, final HRegionInfo hriB);
+
+  /**
+   * Regions hriA and hriB were merged into a new region.
+   * @param hriA one of the region to merge (region removed)
+   * @param hriB the other region to merge (region removed)
+   * @param merged the newly created region (region added)
+   */
+  void regionsMerged(final HRegionInfo hriA, final HRegionInfo hriB, final HRegionInfo merged);
 }

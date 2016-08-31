@@ -104,6 +104,18 @@ public class TestAssignmentListener {
       modified.incrementAndGet();
     }
 
+    @Override
+    public void regionSplitted(final HRegionInfo parent,
+        final HRegionInfo hriA, final HRegionInfo hriB) {
+      // TODO
+    }
+
+    @Override
+    public void regionsMerged(final HRegionInfo hriA, final HRegionInfo hriB,
+        final HRegionInfo merged) {
+      // TODO
+    }
+
     public void reset() {
       openCount.set(0);
       closeCount.set(0);

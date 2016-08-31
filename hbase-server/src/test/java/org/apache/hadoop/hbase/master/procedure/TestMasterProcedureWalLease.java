@@ -76,11 +76,7 @@ public class TestMasterProcedureWalLease {
 
   @After
   public void tearDown() throws Exception {
-    try {
-      UTIL.shutdownMiniCluster();
-    } catch (Exception e) {
-      LOG.warn("failure shutting down cluster", e);
-    }
+    UTIL.shutdownMiniCluster();
   }
 
   @Test

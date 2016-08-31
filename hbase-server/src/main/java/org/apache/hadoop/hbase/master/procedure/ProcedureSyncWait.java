@@ -20,6 +20,10 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.TimeUnit;
 import java.util.List;
 
 import org.apache.commons.logging.Log;
@@ -64,19 +68,98 @@ public final class ProcedureSyncWait {
     T evaluate() throws IOException;
   }
 
-  public static byte[] submitAndWaitProcedure(ProcedureExecutor<MasterProcedureEnv> procExec,
-      final Procedure proc) throws IOException {
-    long procId = procExec.submitProcedure(proc);
-    return waitForProcedureToComplete(procExec, procId);
+  private static class ProcedureFuture implements Future<byte[]> {
+      private final ProcedureExecutor<MasterProcedureEnv> procExec;
+      private final long procId;
+
+      private boolean hasResult = false;
+      private byte[] result = null;
+
+      public ProcedureFuture(ProcedureExecutor<MasterProcedureEnv> procExec, long procId) {
+        this.procExec = procExec;
+        this.procId = procId;
+      }
+
+      @Override
+      public boolean cancel(boolean mayInterruptIfRunning) { return false; }
+
+      @Override
+      public boolean isCancelled() { return false; }
+
+      @Override
+      public boolean isDone() { return hasResult; }
+
+      @Override
+      public byte[] get() throws InterruptedException, ExecutionException {
+        if (hasResult) return result;
+        try {
+          return waitForProcedureToComplete(procExec, procId, Long.MAX_VALUE);
+        } catch (Exception e) {
+          throw new ExecutionException(e);
+        }
+      }
+
+      @Override
+      public byte[] get(long timeout, TimeUnit unit)
+          throws InterruptedException, ExecutionException, TimeoutException {
+        if (hasResult) return result;
+        try {
+          result = waitForProcedureToComplete(procExec, procId, unit.toMillis(timeout));
+          hasResult = true;
+          return result;
+        } catch (TimeoutIOException e) {
+          throw new TimeoutException(e.getMessage());
+        } catch (Exception e) {
+          throw new ExecutionException(e);
+        }
+      }
+    }
+
+  public static Future<byte[]> submitProcedure(final ProcedureExecutor<MasterProcedureEnv> procExec,
+      final Procedure proc) {
+    if (proc.isInitializing()) {
+      procExec.submitProcedure(proc);
+    }
+    return new ProcedureFuture(procExec, proc.getProcId());
   }
 
-  private static byte[] waitForProcedureToComplete(ProcedureExecutor<MasterProcedureEnv> procExec,
-      final long procId) throws IOException {
-    while (!procExec.isFinished(procId) && procExec.isRunning()) {
-      // TODO: add a config to make it tunable
-      // Dev Consideration: are we waiting forever, or we can set up some timeout value?
-      Threads.sleepWithoutInterrupt(250);
+  public static byte[] submitAndWaitProcedure(ProcedureExecutor<MasterProcedureEnv> procExec,
+      final Procedure proc) throws IOException {
+    if (proc.isInitializing()) {
+      procExec.submitProcedure(proc);
     }
+    return waitForProcedureToCompleteIOE(procExec, proc.getProcId(), Long.MAX_VALUE);
+  }
+
+  public static byte[] waitForProcedureToCompleteIOE(
+      final ProcedureExecutor<MasterProcedureEnv> procExec, final long procId, final long timeout)
+      throws IOException {
+    try {
+      return waitForProcedureToComplete(procExec, procId, timeout);
+    } catch (IOException e) {
+      throw e;
+    } catch (Exception e) {
+      throw new IOException(e);
+    }
+  }
+
+  public static byte[] waitForProcedureToComplete(ProcedureExecutor<MasterProcedureEnv> procExec,
+      final long procId) throws IOException {
+    return waitForProcedureToComplete(procExec, procId, Long.MAX_VALUE);
+  }
+
+  private static byte[] waitForProcedureToComplete(
+      final ProcedureExecutor<MasterProcedureEnv> procExec, final long procId, final long timeout)
+      throws Exception {
+    waitFor(procExec.getEnvironment(), "wait for procId=" + procId,
+      new ProcedureSyncWait.Predicate<Boolean>() {
+        @Override
+        public Boolean evaluate() throws IOException {
+          return !procExec.isRunning() || procExec.isFinished(procId);
+        }
+      }
+    );
+
     ProcedureInfo result = procExec.getResult(procId);
     if (result != null) {
       if (result.isFailed()) {

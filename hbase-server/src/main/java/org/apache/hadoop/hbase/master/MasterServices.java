@@ -66,6 +66,9 @@ public interface MasterServices extends Server {
    */
   AssignmentManager getAssignmentManager();
 
+  // TODO: Remove the above and remove the 2
+  org.apache.hadoop.hbase.master.assignment.AssignmentManager getAssignmentManager2();
+
   /**
    * @return Master's filesystem {@link MasterFileSystem} utility class.
    */
