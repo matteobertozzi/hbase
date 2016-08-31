@@ -31,8 +31,12 @@ public class MetricsAssignmentManagerSourceImpl
   private MutableGaugeLong ritGauge;
   private MutableGaugeLong ritCountOverThresholdGauge;
   private MutableGaugeLong ritOldestAgeGauge;
+
   private MetricHistogram assignTimeHisto;
-  private MetricHistogram bulkAssignTimeHisto;
+  private MetricHistogram unassignTimeHisto;
+
+  private MetricHistogram transitionReportHisto;
+  private MetricHistogram onlineReportTimeHisto;
 
   public MetricsAssignmentManagerSourceImpl() {
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT);
@@ -49,28 +53,43 @@ public class MetricsAssignmentManagerSourceImpl
     ritCountOverThresholdGauge = metricsRegistry.newGauge(RIT_COUNT_OVER_THRESHOLD_NAME, "", 0l);
     ritOldestAgeGauge = metricsRegistry.newGauge(RIT_OLDEST_AGE_NAME, "", 0l);
     assignTimeHisto = metricsRegistry.newTimeHistogram(ASSIGN_TIME_NAME);
-    bulkAssignTimeHisto = metricsRegistry.newTimeHistogram(BULK_ASSIGN_TIME_NAME);
+    unassignTimeHisto = metricsRegistry.newTimeHistogram(UNASSIGN_TIME_NAME);
+    transitionReportHisto = metricsRegistry.newTimeHistogram(TRANSITION_REPORT_TIME_NAME);
+    onlineReportTimeHisto = metricsRegistry.newTimeHistogram(ONLINE_REPORT_TIME_NAME);
   }
 
   @Override
-  public void updateAssignmentTime(long time) {
+  public void setRIT(final int ritCount) {
+    ritGauge.set(ritCount);
+  }
+
+  @Override
+  public void setRITCountOverThreshold(final int ritCount) {
+    ritCountOverThresholdGauge.set(ritCount);
+  }
+
+  @Override
+  public void setRITOldestAge(final long ritCount) {
+    ritOldestAgeGauge.set(ritCount);
+  }
+
+  @Override
+  public void updateAssignTime(final long time) {
     assignTimeHisto.add(time);
   }
 
   @Override
-  public void updateBulkAssignTime(long time) {
-    bulkAssignTimeHisto.add(time);
+  public void updateUnassignTime(final long time) {
+    unassignTimeHisto.add(time);
   }
 
-  public void setRIT(int ritCount) {
-    ritGauge.set(ritCount);
+  @Override
+  public void updateTransitionReportTime(final long time) {
+    assignTimeHisto.add(time);
   }
 
-  public void setRITCountOverThreshold(int ritCount) {
-    ritCountOverThresholdGauge.set(ritCount);
-  }
-
-  public void setRITOldestAge(long ritCount) {
-    ritOldestAgeGauge.set(ritCount);
+  @Override
+  public void updateOnlineReportTime(final long time) {
+    unassignTimeHisto.add(time);
   }
 }
