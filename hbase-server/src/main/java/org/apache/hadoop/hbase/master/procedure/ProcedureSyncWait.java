@@ -227,4 +227,82 @@ public final class ProcedureSyncWait {
       }
     });
   }
+
+  /*
+  private static class RegionLock implements Lock, extends Procedure<MasterProcedureEnv> {
+    private final MasterProcedureScheduler sched;
+    private final HRegionInfo regionInfo;
+    private boolean hasLock = false;
+
+    public RegionLock(final MasterProcedureScheduler sched, final HRegionInfo regionInfo) {
+      this.sched = sched;
+      this.regionInfo = regionInfo;
+    }
+
+    @Override
+    public void lock() {
+      while (!tryLock()) {
+        // TODO
+      }
+    }
+
+    @Override
+    public void lockInterruptibly() throws InterruptedException {
+      if (Thread.interrupted())
+        throw new InterruptedException();
+      synchronized (this) {
+        if (waitRegion(this, regionInfo)) {
+          wait();
+        }
+      }
+    }
+
+    @Override
+    public boolean tryLock() {
+      return hasLock;
+    }
+
+    @Override
+    public boolean tryLock(long time, TimeUnit unit) throws InterruptedException {
+      synchronized (this) {
+        if (waitRegion(this, regionInfo)) {
+          wait(unit.toMillis(time));
+        }
+      }
+      return hasLock;
+    }
+
+    @Override
+    public void unlock() {
+      hasLock = false;
+      wakeRegion(this, regionInfo);
+    }
+
+    @Override
+    public Condition newCondition() {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected Procedure[] execute(Void env) {
+      synchronized (this) {
+        hasLock = true;
+        notify();
+      }
+      return null;
+    }
+
+    @Override
+    protected void rollback(Void env) { }
+
+    @Override
+    protected boolean abort(Void env) { return false; }
+
+    @Override
+    protected void serializeStateData(final OutputStream stream) { }
+
+    @Override
+    protected void deserializeStateData(final InputStream stream) {}
+  }
+  */
 }
