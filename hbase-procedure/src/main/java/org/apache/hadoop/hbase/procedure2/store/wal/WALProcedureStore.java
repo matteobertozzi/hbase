@@ -668,6 +668,11 @@ public class WALProcedureStore extends ProcedureStoreBase {
                       StringUtils.humanSize(syncedPerSec)));
           }
 
+          LOG.info(String.format("Sync wait %s, slotIndex=%s/%s , totalSynced=%s (%s/sec)",
+                      StringUtils.humanTimeDiff(syncWaitMs), slotIndex, slots.length,
+                      StringUtils.humanSize(totalSyncedToStore),
+                      StringUtils.humanSize(syncedPerSec)));
+
           // update webui circular buffers (TODO: get rid of allocations)
           final SyncMetrics syncMetrics = new SyncMetrics();
           syncMetrics.timestamp = currentTs;

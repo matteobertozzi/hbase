@@ -30,6 +30,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.StateMachineProcedureData;
+import org.apache.hadoop.hbase.procedure2.util.StringUtils;
 
 /**
  * Procedure described by a series of steps.
@@ -141,7 +142,7 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
       subProcList.add(proc);
     }
   }
-
+  private long stateTs = 0;
   @Override
   protected Procedure[] execute(final TEnvironment env)
       throws ProcedureSuspendedException, ProcedureYieldException, InterruptedException {
@@ -152,10 +153,14 @@ public abstract class StateMachineProcedure<TEnvironment, TState>
       TState state = getCurrentState();
       if (stateCount == 0) {
         setNextState(getStateId(state));
+      } else {
+        LOG.info("[T] " + state + " TOOK " + StringUtils.humanTimeDiff(System.currentTimeMillis() - stateTs));
       }
 
       stateFlow = executeFromState(env, state);
       if (!hasMoreState()) setNextState(EOF_STATE);
+      stateTs = System.currentTimeMillis();
+      LOG.info("[E] " + state + " TOOK " + StringUtils.humanTimeDiff(System.currentTimeMillis() - stateTs));
 
       if (subProcList != null && subProcList.size() != 0) {
         Procedure[] subProcedures = subProcList.toArray(new Procedure[subProcList.size()]);
