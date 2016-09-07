@@ -18,11 +18,52 @@
 
 package org.apache.hadoop.hbase.procedure2;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
+import org.apache.hadoop.hbase.util.AvlUtil.AvlInsertOrReplace;
+import org.apache.hadoop.hbase.util.AvlUtil.AvlKeyComparator;
+import org.apache.hadoop.hbase.util.AvlUtil.AvlLinkedNode;
+import org.apache.hadoop.hbase.util.AvlUtil.AvlTree;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public abstract class OnePhaseProcedure<TEnvironment> extends Procedure<TEnvironment> {
   // TODO (e.g. used by online snapshots)
+
+  protected static abstract class Entry extends AvlLinkedNode<Entry> {
+    private boolean isDone = false;
+    private int numRetries = 0;
+  }
+
+  private Entry pendingEntriesHead = null;
+  private Entry entryMapRoot = null;
+
+  @Override
+  protected Procedure[] execute(final TEnvironment env) {
+    if (pendingEntriesHead != null) {
+      //sendRequests()
+    }
+    return null;
+  }
+
+  @Override
+  protected void rollback(TEnvironment env) {
+  }
+
+  @Override
+  protected boolean abort(TEnvironment env) {
+    return false;
+  }
+
+  @Override
+  protected void serializeStateData(final OutputStream stream) throws IOException {
+  }
+
+  @Override
+  protected void deserializeStateData(final InputStream stream) throws IOException {
+  }
 }
