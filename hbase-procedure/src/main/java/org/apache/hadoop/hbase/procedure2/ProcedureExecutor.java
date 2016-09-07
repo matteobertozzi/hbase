@@ -674,6 +674,7 @@ public class ProcedureExecutor<TEnvironment> {
    * @return the procedure id, that can be used to monitor the operation
    */
   public long submitProcedure(final Procedure proc, final long nonceGroup, final long nonce) {
+    if (!isRunning()) LOG.error("executor not running");
     Preconditions.checkArgument(lastProcId.get() >= 0);
     Preconditions.checkArgument(proc.getState() == ProcedureState.INITIALIZING);
     Preconditions.checkArgument(isRunning(), "executor not running");
@@ -1275,12 +1276,16 @@ public class ProcedureExecutor<TEnvironment> {
   }
 
   private void submitChildrenProcedures(final Procedure[] subprocs) {
+    final long startTime = EnvironmentEdgeManager.currentTime();
     for (int i = 0; i < subprocs.length; ++i) {
       final Procedure subproc = subprocs[i];
       assert !procedures.containsKey(subproc.getProcId());
       procedures.put(subproc.getProcId(), subproc);
       scheduler.addFront(subproc);
     }
+    final long execTime = EnvironmentEdgeManager.currentTime() - startTime;
+    LOG.info("ADD CHILD TO QUEUE " + StringUtils.humanTimeDiff(execTime) +
+      " subproc=" + subprocs.length);
   }
 
   private void countDownChildren(final RootProcedureState procStack, final Procedure procedure) {
