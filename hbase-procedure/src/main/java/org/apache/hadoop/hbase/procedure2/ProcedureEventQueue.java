@@ -45,6 +45,13 @@ public class ProcedureEventQueue {
     if (waitingProcedures == null) {
       waitingProcedures = new ArrayDeque<Procedure>();
     }
+
+    // REMOVE ME: PEDANTIC DEBUG
+    if (waitingProcedures.contains(proc)) {
+      LOG.info("TEO " + this + " already suspended " + proc, new Exception());
+      return;
+    }
+
     waitingProcedures.addLast(proc);
   }
 
