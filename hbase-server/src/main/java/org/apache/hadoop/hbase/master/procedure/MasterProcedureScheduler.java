@@ -155,6 +155,9 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   private <T extends Comparable<T>> Procedure doPoll(final FairQueue<T> fairq) {
     final Queue<T> rq = fairq.poll();
     if (rq == null || !rq.isAvailable()) {
+      if (rq != null) {
+        LOG.info("NOT AVAILABLE " + rq);
+      }
       return null;
     }
 
@@ -163,6 +166,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     final boolean xlockReq = rq.requireExclusiveLock(pollResult);
     if (xlockReq && rq.isLocked() && !rq.hasLockAccess(pollResult)) {
       // someone is already holding the lock (e.g. shared lock). avoid a yield
+      LOG.info("CANT GET ACCESS " + rq + " " + pollResult);
       return null;
     }
 
@@ -214,21 +218,28 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   @Override
   protected int queueSize() {
     int count = 0;
-
+    LOG.info("[S] sched size");
     // Server queues
     final AvlTreeIterator<ServerQueue> serverIter = new AvlTreeIterator<ServerQueue>();
     for (int i = 0; i < serverBuckets.length; ++i) {
       serverIter.seekFirst(serverBuckets[i]);
       while (serverIter.hasNext()) {
-        count += serverIter.next().size();
+        final ServerQueue queue = serverIter.next();
+        LOG.info(" - server " + queue + " isLinked=" + AvlIterableList.isLinked(queue));
+        LOG.info(" --> " + queue.peek());
+        count += queue.size();
       }
     }
 
     // Table queues
     final AvlTreeIterator<TableQueue> tableIter = new AvlTreeIterator<TableQueue>(tableMap);
     while (tableIter.hasNext()) {
-      count += tableIter.next().size();
+      final TableQueue queue = tableIter.next();
+      LOG.info(" - table " + queue + " isLinked=" + AvlIterableList.isLinked(queue));
+      LOG.info(" --> " + queue.peek());
+      count += queue.size();
     }
+    LOG.info("[E] sched size: " + count);
     return count;
   }
 
@@ -1171,6 +1182,8 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   private static abstract class QueueImpl<TKey extends Comparable<TKey>> extends Queue<TKey> {
     private final ArrayDeque<Procedure> runnables = new ArrayDeque<Procedure>();
 
+    private final HashMap<Procedure, Procedure> runset = new HashMap<>(); // DEBUG
+
     public QueueImpl(TKey key) {
       super(key);
     }
@@ -1180,6 +1193,9 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     }
 
     public void add(final Procedure proc, final boolean addToFront) {
+      assert !runset.containsKey(proc) : "proc already in the queue " + proc;
+      runset.put(proc, proc);
+
       if (addToFront) {
         addFront(proc);
       } else {
@@ -1201,7 +1217,10 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
     @Override
     public Procedure poll() {
-      return runnables.poll();
+      //return runnables.poll();
+      final Procedure proc = runnables.poll();
+      runset.remove(proc);
+      return proc;
     }
 
     @Override

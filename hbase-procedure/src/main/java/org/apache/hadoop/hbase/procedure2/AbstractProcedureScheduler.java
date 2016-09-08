@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.procedure2;
 
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
@@ -187,6 +188,13 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
     schedLock();
     try {
       clearQueue();
+
+      // clear events
+      for (ProcedureEvent event: suspendedEvents.keySet()) {
+        LOG.info("TEO clear event " + event + " size=" + event.size());
+        event.clear();
+      }
+      suspendedEvents.clear();
     } finally {
       schedUnlock();
     }
@@ -226,6 +234,9 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
   // ==========================================================================
   //  Procedure Events
   // ==========================================================================
+  private final ConcurrentHashMap<ProcedureEvent, ProcedureEvent> suspendedEvents =
+      new ConcurrentHashMap<ProcedureEvent, ProcedureEvent>();
+
   @Override
   public boolean waitEvent(final ProcedureEvent event, final Procedure procedure) {
     synchronized (event) {
@@ -245,6 +256,7 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
       if (isTraceEnabled) {
         LOG.trace("Suspend event " + event);
       }
+      suspendedEvents.put(event, event);
     }
   }
 
@@ -267,6 +279,7 @@ public abstract class AbstractProcedureScheduler implements ProcedureScheduler {
             LOG.trace("Wake event " + event);
           }
           waitingCount += popEventWaitingObjects(event);
+          suspendedEvents.remove(event);
         }
       }
       wakePollIfNeeded(waitingCount);
