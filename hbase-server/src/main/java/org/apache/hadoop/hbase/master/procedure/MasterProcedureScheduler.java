@@ -542,65 +542,6 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       }
       throw new UnsupportedOperationException("unexpected type " + tpi.getTableOperationType());
     }
-
-    private synchronized boolean tryZkSharedLock(final TableLockManager lockManager,
-        final String purpose) {
-      // Since we only have one lock resource.  We should only acquire zk lock if the znode
-      // does not exist.
-      //
-      if (isSingleSharedLock()) {
-        // Take zk-read-lock
-        TableName tableName = getKey();
-        tableLock = lockManager.readLock(tableName, purpose);
-        try {
-          tableLock.acquire();
-        } catch (IOException e) {
-          LOG.error("failed acquire read lock on " + tableName, e);
-          tableLock = null;
-          return false;
-        }
-      }
-      return true;
-    }
-
-    private synchronized void releaseZkSharedLock(final TableLockManager lockManager) {
-      if (isSingleSharedLock()) {
-        releaseTableLock(lockManager, true);
-      }
-    }
-
-    private synchronized boolean tryZkExclusiveLock(final TableLockManager lockManager,
-        final String purpose) {
-      // Take zk-write-lock
-      TableName tableName = getKey();
-      tableLock = lockManager.writeLock(tableName, purpose);
-      try {
-        tableLock.acquire();
-      } catch (IOException e) {
-        LOG.error("failed acquire write lock on " + tableName, e);
-        tableLock = null;
-        return false;
-      }
-      return true;
-    }
-
-    private synchronized void releaseZkExclusiveLock(final TableLockManager lockManager) {
-      releaseTableLock(lockManager, true);
-    }
-
-    private void releaseTableLock(final TableLockManager lockManager, boolean reset) {
-      for (int i = 0; i < 3; ++i) {
-        try {
-          tableLock.release();
-          if (reset) {
-            tableLock = null;
-          }
-          break;
-        } catch (IOException e) {
-          LOG.warn("Could not release the table write-lock", e);
-        }
-      }
-    }
   }
 
   private static class NamespaceQueueKeyComparator implements AvlKeyComparator<NamespaceQueue> {
@@ -663,35 +604,22 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
    */
   public boolean tryAcquireTableExclusiveLock(final Procedure procedure, final TableName table) {
     schedLock();
-    TableQueue queue = getTableQueue(table);
-    if (!queue.getNamespaceQueue().trySharedLock()) {
-      schedUnlock();
-      return false;
-    }
-
-    if (!queue.tryExclusiveLock(procedure)) {
-      queue.getNamespaceQueue().releaseSharedLock();
-      schedUnlock();
-      return false;
-    }
-
-    removeFromRunQueue(tableRunQueue, queue);
-    boolean hasParentLock = queue.hasParentLock(procedure);
-    schedUnlock();
-
-    boolean hasXLock = true;
-    if (!hasParentLock) {
-      // Zk lock is expensive...
-      hasXLock = queue.tryZkExclusiveLock(lockManager, procedure.toString());
-      if (!hasXLock) {
-        schedLock();
-        if (!hasParentLock) queue.releaseExclusiveLock();
-        queue.getNamespaceQueue().releaseSharedLock();
-        addToRunQueue(tableRunQueue, queue);
-        schedUnlock();
+    try {
+      final TableQueue queue = getTableQueue(table);
+      if (!queue.getNamespaceQueue().trySharedLock()) {
+        return false;
       }
+
+      if (!queue.tryExclusiveLock(procedure)) {
+        queue.getNamespaceQueue().releaseSharedLock();
+        return false;
+      }
+
+      removeFromRunQueue(tableRunQueue, queue);
+      return true;
+    } finally {
+      schedUnlock();
     }
-    return hasXLock;
   }
 
   /**
@@ -700,19 +628,17 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
    * @param table the name of the table that has the exclusive lock
    */
   public void releaseTableExclusiveLock(final Procedure procedure, final TableName table) {
-    final TableQueue queue = getTableQueueWithLock(table);
-    final boolean hasParentLock = queue.hasParentLock(procedure);
-
-    if (!hasParentLock) {
-      // Zk lock is expensive...
-      queue.releaseZkExclusiveLock(lockManager);
-    }
-
     schedLock();
-    if (!hasParentLock) queue.releaseExclusiveLock();
-    queue.getNamespaceQueue().releaseSharedLock();
-    addToRunQueue(tableRunQueue, queue);
-    schedUnlock();
+    try {
+      final TableQueue queue = getTableQueue(table);
+      if (!queue.hasParentLock(procedure)) {
+        queue.releaseExclusiveLock();
+      }
+      queue.getNamespaceQueue().releaseSharedLock();
+      addToRunQueue(tableRunQueue, queue);
+    } finally {
+      schedUnlock();
+    }
   }
 
   /**
@@ -729,29 +655,21 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   private TableQueue tryAcquireTableQueueSharedLock(final Procedure procedure,
       final TableName table) {
     schedLock();
-    TableQueue queue = getTableQueue(table);
-    if (!queue.getNamespaceQueue().trySharedLock()) {
-      return null;
-    }
+    try {
+      final TableQueue queue = getTableQueue(table);
+      if (!queue.getNamespaceQueue().trySharedLock()) {
+        return null;
+      }
 
-    if (!queue.trySharedLock()) {
-      queue.getNamespaceQueue().releaseSharedLock();
+      if (!queue.trySharedLock()) {
+        queue.getNamespaceQueue().releaseSharedLock();
+        return null;
+      }
+
+      return queue;
+    } finally {
       schedUnlock();
-      return null;
     }
-
-    // TODO: Zk lock is expensive and it would be perf bottleneck.  Long term solution is
-    // to remove it.
-    if (!queue.tryZkSharedLock(lockManager, procedure.toString())) {
-      queue.releaseSharedLock();
-      queue.getNamespaceQueue().releaseSharedLock();
-      schedUnlock();
-      return null;
-    }
-
-    schedUnlock();
-
-    return queue;
   }
 
   /**
@@ -760,17 +678,15 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
    * @param table the name of the table that has the shared lock
    */
   public void releaseTableSharedLock(final Procedure procedure, final TableName table) {
-    final TableQueue queue = getTableQueueWithLock(table);
-
-    schedLock();
-    // Zk lock is expensive...
-    queue.releaseZkSharedLock(lockManager);
-
-    queue.getNamespaceQueue().releaseSharedLock();
-    if (queue.releaseSharedLock()) {
-      addToRunQueue(tableRunQueue, queue);
+    try {
+      final TableQueue queue = getTableQueue(table);
+      if (queue.releaseSharedLock()) {
+        addToRunQueue(tableRunQueue, queue);
+      }
+      queue.getNamespaceQueue().releaseSharedLock();
+    } finally {
+      schedUnlock();
     }
-    schedUnlock();
   }
 
   /**
@@ -794,14 +710,6 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
         if (AvlIterableList.isLinked(queue)) {
           tableRunQueue.remove(queue);
         }
-
-        // Remove the table lock
-        try {
-          lockManager.tableDeleted(table);
-        } catch (IOException e) {
-          LOG.warn("Received exception from TableLockManager.tableDeleted:", e); //not critical
-        }
-
         removeTableQueue(table);
       } else {
         // TODO: If there are no create, we can drop all the other ops
