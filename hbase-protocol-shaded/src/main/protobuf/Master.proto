@@ -115,6 +115,17 @@ message OfflineRegionRequest {
 message OfflineRegionResponse {
 }
 
+message SplitTableRegionRequest {
+  required RegionInfo region_info = 1;
+  required bytes split_row = 2;
+  optional uint64 nonce_group = 3 [default = 0];
+  optional uint64 nonce = 4 [default = 0];
+}
+
+message SplitTableRegionResponse {
+  optional uint64 proc_id = 1;
+}
+
 /* Table-level protobufs */
 
 message CreateTableRequest {
@@ -617,6 +628,12 @@ service MasterService {
    */
   rpc OfflineRegion(OfflineRegionRequest)
     returns(OfflineRegionResponse);
+
+  /**
+   * Split region
+   */
+  rpc SplitRegion(SplitTableRegionRequest)
+    returns(SplitTableRegionResponse);
 
   /** Deletes a table */
   rpc DeleteTable(DeleteTableRequest)

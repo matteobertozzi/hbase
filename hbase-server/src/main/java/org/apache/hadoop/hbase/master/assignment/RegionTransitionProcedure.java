@@ -259,7 +259,7 @@ public abstract class RegionTransitionProcedure
     if (isRollbackSupported(transitionState)) {
       // Nothing done up to this point. abort safely.
       // This should happen when something like disableTable() is triggered.
-      env.getAssignmentManager().removeRegionInTransition(regionNode, this);
+      env.getAssignmentManager().removeRegionInTransition(getRegionState(env), this);
       return;
     }
 

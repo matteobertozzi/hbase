@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
+import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
@@ -395,4 +396,6 @@ public interface MasterServices extends Server {
    * @return True if this master is stopping.
    */
   boolean isStopping();
+
+  boolean isSplitOrMergeEnabled(MasterSwitchType switchType);
 }

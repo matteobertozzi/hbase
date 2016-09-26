@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
+import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.normalizer.RegionNormalizer;
@@ -362,8 +363,13 @@ public class MockNoopMasterServices implements MasterServices, Server {
     return null;
   }
 
-   @Override
+  @Override
   public MasterProcedureManagerHost getMasterProcedureManagerHost() {
     return null;
+  }
+
+  @Override
+  public boolean isSplitOrMergeEnabled(MasterSwitchType switchType) {
+    return false;
   }
 }
