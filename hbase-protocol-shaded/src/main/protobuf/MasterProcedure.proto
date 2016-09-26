@@ -329,3 +329,18 @@ message MoveRegionStateData {
   required ServerName source_server = 2;
   required ServerName destination_server = 3;
 }
+
+enum RegionSplitState {
+  REGION_SPLIT_PREPARE = 1;
+  REGION_SPLIT_UNASSIGN_PARENT = 2;
+  REGION_SPLIT_CREATE_DAUGHTERS = 3;
+  REGION_SPLIT_ASSIGN_DAUGHTERS = 4;
+  REGION_SPLIT_FINISH = 5;
+}
+
+message RegionSplitStateData {
+  required RegionInfo region_to_split = 1;
+  optional RegionInfo daughter_region_a = 2;
+  optional RegionInfo daughter_region_b = 3;
+  optional ServerName destination_server = 4;
+}
