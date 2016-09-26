@@ -1299,6 +1299,12 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       }
 
       @Override
+      public MasterProtos.SplitTableRegionResponse splitRegion(RpcController controller,
+          MasterProtos.SplitTableRegionRequest request) throws ServiceException {
+        return stub.splitRegion(controller, request);
+      }
+
+      @Override
       public MasterProtos.DeleteTableResponse deleteTable(RpcController controller,
           MasterProtos.DeleteTableRequest request) throws ServiceException {
         return stub.deleteTable(controller, request);

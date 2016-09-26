@@ -109,7 +109,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.SetSplitOr
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.TruncateTableRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignRegionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.SplitTableRegionRequest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
@@ -1108,19 +1107,6 @@ public final class RequestConverter {
         RegionSpecifierType.ENCODED_REGION_NAME, encodedNameOfdaughaterRegions[i]));
     }
     builder.setForcible(forcible);
-    builder.setNonceGroup(nonceGroup);
-    builder.setNonce(nonce);
-    return builder.build();
-  }
-
-  public static SplitTableRegionRequest buildSplitTableRegionRequest(
-      final HRegionInfo regionInfo,
-      final byte[] splitPoint,
-      final long nonceGroup,
-      final long nonce) {
-    SplitTableRegionRequest.Builder builder = SplitTableRegionRequest.newBuilder();
-    builder.setRegionInfo(HRegionInfo.convert(regionInfo));
-    builder.setSplitRow(UnsafeByteOperations.unsafeWrap(splitPoint));
     builder.setNonceGroup(nonceGroup);
     builder.setNonce(nonce);
     return builder.build();

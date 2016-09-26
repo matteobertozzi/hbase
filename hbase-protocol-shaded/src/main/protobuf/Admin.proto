@@ -119,18 +119,6 @@ message CloseRegionResponse {
 }
 
 /**
- * Closes the specified region(s) for
- * split or merge
- */
-message CloseRegionForSplitOrMergeRequest {
-  repeated RegionSpecifier region = 1;
-}
-
-message CloseRegionForSplitOrMergeResponse {
-  required bool closed = 1;
-}
-
-/**
  * Flushes the MemStore of the specified region.
  * <p>
  * This method is synchronous.
@@ -304,9 +292,6 @@ service AdminService {
 
   rpc CloseRegion(CloseRegionRequest)
     returns(CloseRegionResponse);
-
-  rpc CloseRegionForSplitOrMerge(CloseRegionForSplitOrMergeRequest)
-    returns(CloseRegionForSplitOrMergeResponse);
 
   rpc FlushRegion(FlushRegionRequest)
     returns(FlushRegionResponse);

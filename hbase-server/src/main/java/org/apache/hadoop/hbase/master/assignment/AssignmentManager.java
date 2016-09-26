@@ -712,6 +712,7 @@ public class AssignmentManager implements ServerListener {
         " hriA=" + hriA + " hriB=" + hriB);
     }
 
+    // TODO: Should this be in preSplit?
     try {
       regionStateListener.onRegionSplit(parent);
     } catch (QuotaExceededException e) {
@@ -720,14 +721,19 @@ public class AssignmentManager implements ServerListener {
       throw e;
     }
 
-    // Submit split
+    // Submit the Split procedure
     final byte[] splitKey = hriB.getStartKey();
-    LOG.debug("handling split request from RS, parent=" + parent +
-      " splitKey=" + Bytes.toStringBinary(splitKey));
-    master.getMasterProcedureExecutor().submitProcedure(
-        createSplitProcedure(parent, splitKey));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("handling split request from RS=" + serverName +
+          ", parent=" + parent + " splitKey=" + Bytes.toStringBinary(splitKey));
+    }
+    master.getMasterProcedureExecutor().submitProcedure(createSplitProcedure(parent, splitKey));
 
-    // TODO: If the RS is < 2.0 throw an exception, we are handling the split
+    // If the RS is < 2.0 throw an exception to abort the operation, we are handling the split
+    if (regionStateMap.getOrCreateServer(serverName).getVersionNumber() < 0x0200000) {
+      throw new UnsupportedOperationException(String.format(
+        "Split handled by the master: parent=%s hriA=%s hriB=%s", parent, hriA, hriB));
+    }
   }
 
   private void updateRegionMergeTransition(final ServerName serverName, final TransitionCode state,
