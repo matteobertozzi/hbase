@@ -481,7 +481,9 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
         // if we have an exclusive lock already taken
         // only child of the lock owner can be executed
         final Procedure nextProc = peek();
-        return nextProc != null && hasLockAccess(nextProc);
+        boolean x = nextProc != null && hasLockAccess(nextProc);
+        if (!x) LOG.info("NEXT AVAIL " + nextProc);
+        return x;
       }
 
       // no xlock

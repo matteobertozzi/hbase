@@ -198,7 +198,7 @@ public class TestCreateTableProcedure extends TestTableDDLProcedureBase {
 
   @Test
   public void testMRegions() throws Exception {
-    final byte[][] splitKeys = new byte[500][];
+    final byte[][] splitKeys = new byte[10][];
     for (int i = 0; i < splitKeys.length; ++i) {
       splitKeys[i] = Bytes.toBytes(String.format("%08d", i));
     }
