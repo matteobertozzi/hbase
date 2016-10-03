@@ -798,5 +798,12 @@ public class TestMasterProcedureScheduler {
       sb.append(")");
     }
   }
+
+  @Test
+  public void testFoo() throws Exception {
+    MasterProcedureSchedulerPerformanceEvaluation tool =
+        new MasterProcedureSchedulerPerformanceEvaluation();
+    tool.doWork();
+  }
 }
 
