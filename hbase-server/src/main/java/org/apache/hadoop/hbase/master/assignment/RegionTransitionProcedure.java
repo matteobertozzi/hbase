@@ -280,16 +280,17 @@ public abstract class RegionTransitionProcedure
   }
 
   @Override
-  protected boolean acquireLock(final MasterProcedureEnv env) {
+  protected LockState acquireLock(final MasterProcedureEnv env) {
     // unless we are assigning meta, wait for meta to be available and loaded.
     if (!isMeta() && (env.waitFailoverCleanup(this) ||
         env.getAssignmentManager().waitMetaInitialized(this, getRegionInfo()))) {
-      return false;
+      return LockState.LOCK_EVENT_WAIT;
     }
-
-    // TODO: Revisit this and move it to the executor
-    hasLock = !env.getProcedureScheduler().waitRegion(this, getRegionInfo());
-    return hasLock;
+    if (env.getProcedureScheduler().waitRegion(this, getRegionInfo())) {
+      return LockState.LOCK_EVENT_WAIT;
+    }
+    hasLock = true;
+    return LockState.LOCK_ACQUIRED;
   }
 
   @Override

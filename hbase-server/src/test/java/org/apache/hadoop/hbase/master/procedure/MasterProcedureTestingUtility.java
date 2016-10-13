@@ -72,7 +72,7 @@ public final class MasterProcedureTestingUtility {
       throws Exception {
     final MasterProcedureEnv env = procExec.getEnvironment();
     final HMaster master = (HMaster)env.getMasterServices();
-    ProcedureTestingUtility.restart(procExec,
+    ProcedureTestingUtility.restart(procExec, true, true,
       // stop services
       new Callable<Void>() {
         @Override
@@ -104,8 +104,7 @@ public final class MasterProcedureTestingUtility {
           master.setInitialized(true);
           return null;
         }
-      },
-      true);
+      });
   }
 
   // ==========================================================================
