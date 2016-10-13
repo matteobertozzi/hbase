@@ -43,12 +43,14 @@ import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+@Ignore
 @Category({MasterTests.class, MediumTests.class})
 public class TestDispatchMergingRegionsProcedure {
   private static final Log LOG = LogFactory.getLog(TestDispatchMergingRegionsProcedure.class);
