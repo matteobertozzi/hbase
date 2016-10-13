@@ -214,11 +214,12 @@ public class TestProcedureSuspended {
     }
 
     @Override
-    protected boolean acquireLock(final TestProcEnv env) {
+    protected LockState acquireLock(final TestProcEnv env) {
       if ((hasLock = lock.compareAndSet(false, true))) {
         LOG.info("ACQUIRE LOCK " + this + " " + (hasLock));
+        return LockState.LOCK_ACQUIRED;
       }
-      return hasLock;
+      return LockState.LOCK_YIELD_WAIT;
     }
 
     @Override

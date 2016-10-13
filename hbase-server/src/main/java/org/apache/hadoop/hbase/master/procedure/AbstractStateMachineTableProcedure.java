@@ -76,20 +76,24 @@ public abstract class AbstractStateMachineTableProcedure<TState>
   }
 
   @Override
-  protected boolean acquireLock(final MasterProcedureEnv env) {
-    if (env.waitInitialized(this)) return false;
-    return env.getProcedureQueue().tryAcquireTableExclusiveLock(this, getTableName());
+  protected LockState acquireLock(final MasterProcedureEnv env) {
+    if (env.waitInitialized(this)) return LockState.LOCK_EVENT_WAIT;
+    if (env.getProcedureScheduler().waitTableExclusiveLock(this, getTableName())) {
+      return LockState.LOCK_EVENT_WAIT;
+    }
+    return LockState.LOCK_ACQUIRED;
   }
 
   @Override
   protected void releaseLock(final MasterProcedureEnv env) {
-    env.getProcedureQueue().releaseTableExclusiveLock(this, getTableName());
+    env.getProcedureScheduler().wakeTableExclusiveLock(this, getTableName());
   }
 
   @Override
-  protected boolean doAcquireLock(final MasterProcedureEnv env) {
-    hasLock = acquireLock(env);
-    return hasLock;
+  protected LockState doAcquireLock(final MasterProcedureEnv env) {
+    final LockState state = acquireLock(env);
+    hasLock = (state == LockState.LOCK_ACQUIRED);
+    return state;
   }
 
   @Override
