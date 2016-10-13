@@ -307,15 +307,18 @@ public class ServerCrashProcedure
   }
 
   @Override
-  protected boolean acquireLock(final MasterProcedureEnv env) {
-    if (env.waitFailoverCleanup(this)) return false;
-    if (env.waitServerCrashProcessingEnabled(this)) return false;
-    return env.getProcedureQueue().tryAcquireServerExclusiveLock(this, getServerName());
+  protected LockState acquireLock(final MasterProcedureEnv env) {
+    if (env.waitFailoverCleanup(this)) return LockState.LOCK_EVENT_WAIT;
+    if (env.waitServerCrashProcessingEnabled(this)) return LockState.LOCK_EVENT_WAIT;
+    if (env.getProcedureScheduler().waitServerExclusiveLock(this, getServerName())) {
+      return LockState.LOCK_EVENT_WAIT;
+    }
+    return LockState.LOCK_ACQUIRED;
   }
 
   @Override
   protected void releaseLock(final MasterProcedureEnv env) {
-    env.getProcedureQueue().releaseServerExclusiveLock(this, getServerName());
+    env.getProcedureScheduler().wakeServerExclusiveLock(this, getServerName());
   }
 
   @Override

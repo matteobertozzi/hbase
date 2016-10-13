@@ -28,7 +28,6 @@ import org.apache.commons.lang.ArrayUtils;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.master.TableLockManager;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
 import org.apache.hadoop.hbase.procedure2.util.StringUtils;
@@ -63,11 +62,11 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
           + "proportion of table:region ops is 1:regions_per_table. Default: "
           + DEFAULT_OPS_TYPE);
 
-  private int numTables;
-  private int regionsPerTable;
-  private int numOps;
-  private int numThreads;
-  private String opsType;
+  private int numTables = DEFAULT_NUM_TABLES;
+  private int regionsPerTable = DEFAULT_REGIONS_PER_TABLE;
+  private int numOps = DEFAULT_NUM_OPERATIONS;
+  private int numThreads = DEFAULT_NUM_THREADS;
+  private String opsType = DEFAULT_OPS_TYPE;
 
   private MasterProcedureScheduler procedureScheduler;
   // List of table/region procedures to schedule.
@@ -84,10 +83,15 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
       super(procId, hri.getTable(), TableOperationType.UNASSIGN, hri);
     }
 
-    public boolean acquireLock(Void env) {
-      return !procedureScheduler.waitRegions(this, getTableName(), getRegionInfo());
+    @Override
+    public LockState acquireLock(Void env) {
+      if (procedureScheduler.waitRegions(this, getTableName(), getRegionInfo())) {
+        return LockState.LOCK_EVENT_WAIT;
+      }
+      return LockState.LOCK_ACQUIRED;
     }
 
+    @Override
     public void releaseLock(Void env) {
       procedureScheduler.wakeRegions(this, getTableName(), getRegionInfo());
     }
@@ -111,12 +115,17 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
       super(procId, tableName, TableOperationType.EDIT);
     }
 
-    public boolean acquireLock(Void env) {
-      return procedureScheduler.tryAcquireTableExclusiveLock(this, getTableName());
+    @Override
+    public LockState acquireLock(Void env) {
+      if (procedureScheduler.waitTableExclusiveLock(this, getTableName())) {
+        return LockState.LOCK_EVENT_WAIT;
+      }
+      return LockState.LOCK_ACQUIRED;
     }
 
+    @Override
     public void releaseLock(Void env) {
-      procedureScheduler.releaseTableExclusiveLock(this, getTableName());
+      procedureScheduler.wakeTableExclusiveLock(this, getTableName());
     }
   }
 
@@ -213,12 +222,17 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
           continue;
         }
 
-        if (proc.acquireLock(null)) {
-          completed.incrementAndGet();
-          proc.releaseLock(null);
-        } else {
-          procedureScheduler.yield(proc);
+        switch (proc.acquireLock(null)) {
+          case LOCK_ACQUIRED:
+            completed.incrementAndGet();
+            proc.releaseLock(null);
+            break;
+          case LOCK_YIELD_WAIT:
+            break;
+          case LOCK_EVENT_WAIT:
+            break;
         }
+
         if (completed.get() % 100000 == 0) {
           System.out.println("Completed " + completed.get() + " procedures.");
         }
@@ -243,8 +257,7 @@ public class MasterProcedureSchedulerPerformanceEvaluation extends AbstractHBase
 
   @Override
   protected int doWork() throws Exception {
-    procedureScheduler = new MasterProcedureScheduler(
-        UTIL.getConfiguration(), new TableLockManager.NullTableLockManager());
+    procedureScheduler = new MasterProcedureScheduler(UTIL.getConfiguration());
     procedureScheduler.start();
     setupOperations();
 

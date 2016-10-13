@@ -253,14 +253,19 @@ public class DispatchMergingRegionsProcedure
   }
 
   @Override
-  protected boolean acquireLock(final MasterProcedureEnv env) {
-    return !env.getProcedureQueue().waitRegions(
-      this, getTableName(), regionsToMerge[0], regionsToMerge[1]);
+  protected LockState acquireLock(final MasterProcedureEnv env) {
+    if (!getTableName().isSystemTable() && env.waitInitialized(this)) {
+      return LockState.LOCK_EVENT_WAIT;
+    }
+    if (env.getProcedureScheduler().waitRegions(this, getTableName(), regionsToMerge)) {
+      return LockState.LOCK_EVENT_WAIT;
+    }
+    return LockState.LOCK_ACQUIRED;
   }
 
   @Override
   protected void releaseLock(final MasterProcedureEnv env) {
-    env.getProcedureQueue().wakeRegions(this, getTableName(), regionsToMerge[0], regionsToMerge[1]);
+    env.getProcedureScheduler().wakeRegions(this, getTableName(), regionsToMerge[0], regionsToMerge[1]);
   }
 
   @Override

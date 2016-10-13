@@ -34,8 +34,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
-import org.apache.hadoop.hbase.master.TableLockManager;
-import org.apache.hadoop.hbase.master.TableLockManager.TableLock;
 import org.apache.hadoop.hbase.master.procedure.TableProcedureInterface.TableOperationType;
 import org.apache.hadoop.hbase.procedure2.AbstractProcedureScheduler;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -66,8 +64,6 @@ import org.apache.hadoop.hbase.util.AvlUtil.AvlTreeIterator;
 public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   private static final Log LOG = LogFactory.getLog(MasterProcedureScheduler.class);
 
-  private final TableLockManager lockManager;
-
   private final static NamespaceQueueKeyComparator NAMESPACE_QUEUE_KEY_COMPARATOR =
       new NamespaceQueueKeyComparator();
   private final static ServerQueueKeyComparator SERVER_QUEUE_KEY_COMPARATOR =
@@ -86,9 +82,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   private final int userTablePriority;
   private final int sysTablePriority;
 
-  public MasterProcedureScheduler(final Configuration conf, final TableLockManager lockManager) {
-    this.lockManager = lockManager;
-
+  public MasterProcedureScheduler(final Configuration conf) {
     // TODO: should this be part of the HTD?
     metaTablePriority = conf.getInt("hbase.master.procedure.queue.meta.table.priority", 3);
     sysTablePriority = conf.getInt("hbase.master.procedure.queue.system.table.priority", 2);
@@ -118,9 +112,8 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
   private <T extends Comparable<T>> void doAdd(final FairQueue<T> fairq,
       final Queue<T> queue, final Procedure proc, final boolean addFront) {
-    if (proc.isSuspended()) return;
-
     queue.add(proc, addFront);
+
     if (!queue.hasExclusiveLock() || queue.isLockOwner(proc.getProcId())) {
       // if the queue was not remove for an xlock execution
       // or the proc is the lock owner, put the queue back into execution
@@ -167,6 +160,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     if (xlockReq && rq.isLocked() && !rq.hasLockAccess(pollResult)) {
       // someone is already holding the lock (e.g. shared lock). avoid a yield
       LOG.info("CANT GET ACCESS " + rq + " " + pollResult);
+      removeFromRunQueue(fairq, rq);
       return null;
     }
 
@@ -182,12 +176,11 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
         removeFromRunQueue(fairq, rq);
       }
     }
-
     return pollResult;
   }
 
   @Override
-  public void clearQueue() {
+  protected void clearQueue() {
     // Remove Servers
     for (int i = 0; i < serverBuckets.length; ++i) {
       clear(serverBuckets[i], serverRunQueue, SERVER_QUEUE_KEY_COMPARATOR);
@@ -395,7 +388,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     }
 
     public boolean requireExclusiveLock(Procedure proc) {
-      ServerProcedureInterface spi = (ServerProcedureInterface)proc;
+      final ServerProcedureInterface spi = (ServerProcedureInterface)proc;
       switch (spi.getServerOperationType()) {
         case CRASH_HANDLER:
           return true;
@@ -454,7 +447,6 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     private final NamespaceQueue namespaceQueue;
 
     private HashMap<HRegionInfo, RegionEvent> regionEventMap;
-    private TableLock tableLock = null;
 
     public TableQueue(TableName tableName, NamespaceQueue namespaceQueue, int priority) {
       super(tableName, priority);
@@ -466,7 +458,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     }
 
     @Override
-    public synchronized boolean isAvailable() {
+    public boolean isAvailable() {
       // if there are no items in the queue, or the namespace is locked.
       // we can't execute operation on this table
       if (isEmpty() || namespaceQueue.hasExclusiveLock()) {
@@ -484,7 +476,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       return true;
     }
 
-    public synchronized RegionEvent getRegionEvent(final HRegionInfo regionInfo) {
+    public RegionEvent getRegionEvent(final HRegionInfo regionInfo) {
       if (regionEventMap == null) {
         regionEventMap = new HashMap<HRegionInfo, RegionEvent>();
       }
@@ -496,7 +488,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       return event;
     }
 
-    public synchronized void removeRegionEvent(final RegionEvent event) {
+    public void removeRegionEvent(final RegionEvent event) {
       regionEventMap.remove(event.getRegionInfo());
       if (regionEventMap.isEmpty()) {
         regionEventMap = null;
@@ -517,30 +509,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     }
 
     public boolean requireExclusiveLock(Procedure proc) {
-      TableProcedureInterface tpi = (TableProcedureInterface)proc;
-      switch (tpi.getTableOperationType()) {
-        case CREATE:
-        case DELETE:
-        case DISABLE:
-        case ENABLE:
-          return true;
-        case EDIT:
-          // we allow concurrent edit on the NS table
-          return !tpi.getTableName().equals(TableName.NAMESPACE_TABLE_NAME);
-        case READ:
-          return false;
-        // region operations are using the shared-lock on the table
-        // and then they will grab an xlock on the region.
-        case SPLIT:
-        case MERGE:
-        case ASSIGN:
-        case UNASSIGN:
-        case REGION_EDIT:
-          return false;
-        default:
-          break;
-      }
-      throw new UnsupportedOperationException("unexpected type " + tpi.getTableOperationType());
+      return requireTableExclusiveLock((TableProcedureInterface)proc);
     }
   }
 
@@ -595,95 +564,169 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   // ============================================================================
   //  Table Locking Helpers
   // ============================================================================
+  private static boolean requireTableExclusiveLock(TableProcedureInterface proc) {
+    switch (proc.getTableOperationType()) {
+      case CREATE:
+      case DELETE:
+      case DISABLE:
+      case ENABLE:
+        return true;
+      case EDIT:
+        // we allow concurrent edit on the NS table
+        return !proc.getTableName().equals(TableName.NAMESPACE_TABLE_NAME);
+      case READ:
+        return false;
+      // region operations are using the shared-lock on the table
+      // and then they will grab an xlock on the region.
+      case SPLIT:
+      case MERGE:
+      case ASSIGN:
+      case UNASSIGN:
+      case REGION_EDIT:
+        return false;
+      default:
+        break;
+    }
+    throw new UnsupportedOperationException("unexpected type " + proc.getTableOperationType());
+  }
+
   /**
-   * Try to acquire the exclusive lock on the specified table.
+   * Suspend the procedure if the specified table is already locked.
+   * Based on the table operation type the xlock or the shared-lock will be taken.
+   * @param procedure the procedure trying to acquire the lock
+   * @return true if the procedure has to wait for the table to be available
+   */
+  public boolean waitTableLock(final Procedure procedure) {
+    TableProcedureInterface tpi = (TableProcedureInterface)procedure;
+    if (requireTableExclusiveLock(tpi)) {
+      return waitTableExclusiveLock(procedure, tpi.getTableName());
+    }
+    return waitTableSharedLock(procedure, tpi.getTableName());
+  }
+
+  /**
+   * Wake the procedures waiting for the specified table
+   * @param procedure the procedure releasing the lock
+   */
+  public void wakeTableLock(final Procedure procedure) {
+    TableProcedureInterface tpi = (TableProcedureInterface)procedure;
+    if (requireTableExclusiveLock(tpi)) {
+      wakeTableExclusiveLock(procedure, tpi.getTableName());
+    } else {
+      wakeTableSharedLock(procedure, tpi.getTableName());
+    }
+  }
+
+  /**
+   * Suspend the procedure if the specified table is already locked.
    * other operations in the table-queue will be executed after the lock is released.
    * @param procedure the procedure trying to acquire the lock
    * @param table Table to lock
-   * @return true if we were able to acquire the lock on the table, otherwise false.
+   * @return true if the procedure has to wait for the table to be available
    */
-  public boolean tryAcquireTableExclusiveLock(final Procedure procedure, final TableName table) {
+  public boolean waitTableExclusiveLock(final Procedure procedure, final TableName table) {
     schedLock();
     try {
-      final TableQueue queue = getTableQueue(table);
-      if (!queue.getNamespaceQueue().trySharedLock()) {
-        return false;
+      final TableQueue tableQueue = getTableQueue(table);
+      final NamespaceQueue nsQueue = tableQueue.getNamespaceQueue();
+      if (!nsQueue.trySharedLock(procedure)) {
+        suspendProcedure(nsQueue.getEvent(), procedure);
+        return true;
       }
 
-      if (!queue.tryExclusiveLock(procedure)) {
-        queue.getNamespaceQueue().releaseSharedLock();
-        return false;
+      if (!tableQueue.tryExclusiveLock(procedure)) {
+        nsQueue.releaseSharedLock();
+        suspendProcedure(tableQueue.getEvent(), procedure);
+        return true;
       }
 
-      removeFromRunQueue(tableRunQueue, queue);
-      return true;
+      removeFromRunQueue(tableRunQueue, tableQueue);
+      return false;
     } finally {
       schedUnlock();
     }
   }
 
   /**
-   * Release the exclusive lock taken with tryAcquireTableWrite()
+   * Wake the procedures waiting for the specified table
    * @param procedure the procedure releasing the lock
    * @param table the name of the table that has the exclusive lock
    */
-  public void releaseTableExclusiveLock(final Procedure procedure, final TableName table) {
+  public void wakeTableExclusiveLock(final Procedure procedure, final TableName table) {
     schedLock();
     try {
-      final TableQueue queue = getTableQueue(table);
-      if (!queue.hasParentLock(procedure)) {
-        queue.releaseExclusiveLock();
+      final TableQueue tableQueue = getTableQueue(table);
+      int waitingCount = 0;
+
+      if (!tableQueue.hasParentLock(procedure)) {
+        tableQueue.releaseExclusiveLock();
+        waitingCount += popEventWaitingProcedures(tableQueue.getEvent());
       }
-      queue.getNamespaceQueue().releaseSharedLock();
-      addToRunQueue(tableRunQueue, queue);
+
+      final NamespaceQueue nsQueue = tableQueue.getNamespaceQueue();
+      if (nsQueue.releaseSharedLock()) {
+        waitingCount += popEventWaitingProcedures(nsQueue.getEvent());
+      }
+
+      addToRunQueue(tableRunQueue, tableQueue);
+      wakePollIfNeeded(waitingCount);
     } finally {
       schedUnlock();
     }
   }
 
   /**
-   * Try to acquire the shared lock on the specified table.
+   * Suspend the procedure if the specified table is already locked.
    * other "read" operations in the table-queue may be executed concurrently,
    * @param procedure the procedure trying to acquire the lock
    * @param table Table to lock
-   * @return true if we were able to acquire the lock on the table, otherwise false.
+   * @return true if the procedure has to wait for the table to be available
    */
-  public boolean tryAcquireTableSharedLock(final Procedure procedure, final TableName table) {
-    return tryAcquireTableQueueSharedLock(procedure, table) != null;
+  public boolean waitTableSharedLock(final Procedure procedure, final TableName table) {
+    return waitTableQueueSharedLock(procedure, table) == null;
   }
 
-  private TableQueue tryAcquireTableQueueSharedLock(final Procedure procedure,
-      final TableName table) {
+  private TableQueue waitTableQueueSharedLock(final Procedure procedure, final TableName table) {
     schedLock();
     try {
-      final TableQueue queue = getTableQueue(table);
-      if (!queue.getNamespaceQueue().trySharedLock()) {
+      final TableQueue tableQueue = getTableQueue(table);
+      final NamespaceQueue nsQueue = tableQueue.getNamespaceQueue();
+      if (!nsQueue.trySharedLock(procedure)) {
+        suspendProcedure(nsQueue.getEvent(), procedure);
         return null;
       }
 
-      if (!queue.trySharedLock()) {
-        queue.getNamespaceQueue().releaseSharedLock();
+      if (!tableQueue.trySharedLock(procedure)) {
+        tableQueue.getNamespaceQueue().releaseSharedLock();
+        suspendProcedure(tableQueue.getEvent(), procedure);
         return null;
       }
 
-      return queue;
+      return tableQueue;
     } finally {
       schedUnlock();
     }
   }
 
   /**
-   * Release the shared lock taken with tryAcquireTableRead()
+   * Wake the procedures waiting for the specified table
    * @param procedure the procedure releasing the lock
    * @param table the name of the table that has the shared lock
    */
-  public void releaseTableSharedLock(final Procedure procedure, final TableName table) {
+  public void wakeTableSharedLock(final Procedure procedure, final TableName table) {
+    schedLock();
     try {
-      final TableQueue queue = getTableQueue(table);
-      if (queue.releaseSharedLock()) {
-        addToRunQueue(tableRunQueue, queue);
+      final TableQueue tableQueue = getTableQueue(table);
+      final NamespaceQueue nsQueue = tableQueue.getNamespaceQueue();
+      int waitingCount = 0;
+      if (tableQueue.releaseSharedLock()) {
+        addToRunQueue(tableRunQueue, tableQueue);
+        waitingCount += popEventWaitingProcedures(tableQueue.getEvent());
       }
-      queue.getNamespaceQueue().releaseSharedLock();
+      if (nsQueue.releaseSharedLock()) {
+        waitingCount += popEventWaitingProcedures(nsQueue.getEvent());
+      }
+      wakePollIfNeeded(waitingCount);
     } finally {
       schedUnlock();
     }
@@ -751,7 +794,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       queue = getTableQueueWithLock(table);
     } else {
       // acquire the table shared-lock
-      queue = tryAcquireTableQueueSharedLock(procedure, table);
+      queue = waitTableQueueSharedLock(procedure, table);
       if (queue == null) return true;
     }
 
@@ -776,7 +819,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     }
 
     if (!hasLock && !procedure.hasParent()) {
-      releaseTableSharedLock(procedure, table);
+      wakeTableSharedLock(procedure, table);
     }
     return !hasLock;
   }
@@ -826,13 +869,12 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
       for (int i = numProcs - 1; i >= 0; --i) {
         wakeProcedure(nextProcs[i]);
       }
-
       wakePollIfNeeded(numProcs);
 
       if (!procedure.hasParent()) {
         // release the table shared-lock.
         // (if we have a parent, it is holding an xlock so we didn't take the shared-lock)
-        releaseTableSharedLock(procedure, table);
+        wakeTableSharedLock(procedure, table);
       }
     } finally {
       schedUnlock();
@@ -843,45 +885,53 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   //  Namespace Locking Helpers
   // ============================================================================
   /**
-   * Try to acquire the exclusive lock on the specified namespace.
-   * @see #releaseNamespaceExclusiveLock(Procedure,String)
+   * Suspend the procedure if the specified namespace is already locked.
+   * @see #wakeNamespaceExclusiveLock(Procedure,String)
    * @param procedure the procedure trying to acquire the lock
    * @param nsName Namespace to lock
-   * @return true if we were able to acquire the lock on the namespace, otherwise false.
+   * @return true if the procedure has to wait for the namespace to be available
    */
-  public boolean tryAcquireNamespaceExclusiveLock(final Procedure procedure, final String nsName) {
+  public boolean waitNamespaceExclusiveLock(final Procedure procedure, final String nsName) {
     schedLock();
     try {
-      TableQueue tableQueue = getTableQueue(TableName.NAMESPACE_TABLE_NAME);
-      if (!tableQueue.trySharedLock()) return false;
-
-      NamespaceQueue nsQueue = getNamespaceQueue(nsName);
-      boolean hasLock = nsQueue.tryExclusiveLock(procedure);
-      if (!hasLock) {
-        tableQueue.releaseSharedLock();
+      final TableQueue tableQueue = getTableQueue(TableName.NAMESPACE_TABLE_NAME);
+      if (!tableQueue.trySharedLock(procedure)) {
+        suspendProcedure(tableQueue.getEvent(), procedure);
+        return true;
       }
-      return hasLock;
+
+      final NamespaceQueue nsQueue = getNamespaceQueue(nsName);
+      if (!nsQueue.tryExclusiveLock(procedure)) {
+        tableQueue.releaseSharedLock();
+        suspendProcedure(nsQueue.getEvent(), procedure);
+        return true;
+      }
+      return false;
     } finally {
       schedUnlock();
     }
   }
 
   /**
-   * Release the exclusive lock
-   * @see #tryAcquireNamespaceExclusiveLock(Procedure,String)
+   * Wake the procedures waiting for the specified namespace
+   * @see #waitNamespaceExclusiveLock(Procedure,String)
    * @param procedure the procedure releasing the lock
    * @param nsName the namespace that has the exclusive lock
    */
-  public void releaseNamespaceExclusiveLock(final Procedure procedure, final String nsName) {
+  public void wakeNamespaceExclusiveLock(final Procedure procedure, final String nsName) {
     schedLock();
     try {
       final TableQueue tableQueue = getTableQueue(TableName.NAMESPACE_TABLE_NAME);
-      final NamespaceQueue queue = getNamespaceQueue(nsName);
+      final NamespaceQueue nsQueue = getNamespaceQueue(nsName);
+      int waitingCount = 0;
 
-      queue.releaseExclusiveLock();
+      nsQueue.releaseExclusiveLock();
       if (tableQueue.releaseSharedLock()) {
         addToRunQueue(tableRunQueue, tableQueue);
+        waitingCount += popEventWaitingProcedures(tableQueue.getEvent());
       }
+      waitingCount += popEventWaitingProcedures(nsQueue.getEvent());
+      wakePollIfNeeded(waitingCount);
     } finally {
       schedUnlock();
     }
@@ -892,65 +942,45 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   // ============================================================================
   /**
    * Try to acquire the exclusive lock on the specified server.
-   * @see #releaseServerExclusiveLock(Procedure,ServerName)
+   * @see #wakeExclusiveLock(Procedure,ServerName)
    * @param procedure the procedure trying to acquire the lock
    * @param serverName Server to lock
-   * @return true if we were able to acquire the lock on the server, otherwise false.
+   * @return true if the procedure has to wait for the server to be available
    */
-  public boolean tryAcquireServerExclusiveLock(final Procedure procedure,
-      final ServerName serverName) {
+  public boolean waitServerExclusiveLock(final Procedure procedure, final ServerName serverName) {
     schedLock();
     try {
       ServerQueue queue = getServerQueue(serverName);
       if (queue.tryExclusiveLock(procedure)) {
         removeFromRunQueue(serverRunQueue, queue);
-        return true;
+        return false;
       }
+
+      suspendProcedure(queue.getEvent(), procedure);
+      return true;
     } finally {
       schedUnlock();
     }
-    return false;
   }
 
   /**
-   * Release the exclusive lock
-   * @see #tryAcquireServerExclusiveLock(Procedure,ServerName)
+   * Wake the procedures waiting for the specified server
+   * @see #waitServerExclusiveLock(Procedure,ServerName)
    * @param procedure the procedure releasing the lock
    * @param serverName the server that has the exclusive lock
    */
-  public void releaseServerExclusiveLock(final Procedure procedure,
-      final ServerName serverName) {
+  public void wakeServerExclusiveLock(final Procedure procedure, final ServerName serverName) {
     schedLock();
     try {
-      ServerQueue queue = getServerQueue(serverName);
+      final ServerQueue queue = getServerQueue(serverName);
       queue.releaseExclusiveLock();
       addToRunQueue(serverRunQueue, queue);
+
+      int waitingCount = popEventWaitingProcedures(queue.getEvent());
+      wakePollIfNeeded(waitingCount);
     } finally {
       schedUnlock();
     }
-  }
-
-  /**
-   * Try to acquire the shared lock on the specified server.
-   * @see #releaseServerSharedLock(Procedure,ServerName)
-   * @param procedure the procedure releasing the lock
-   * @param serverName Server to lock
-   * @return true if we were able to acquire the lock on the server, otherwise false.
-   */
-  public boolean tryAcquireServerSharedLock(final Procedure procedure,
-      final ServerName serverName) {
-    return getServerQueueWithLock(serverName).trySharedLock();
-  }
-
-  /**
-   * Release the shared lock taken
-   * @see #tryAcquireServerSharedLock(Procedure,ServerName)
-   * @param procedure the procedure releasing the lock
-   * @param serverName the server that has the shared lock
-   */
-  public void releaseServerSharedLock(final Procedure procedure,
-      final ServerName serverName) {
-    getServerQueueWithLock(serverName).releaseSharedLock();
   }
 
   // ============================================================================
@@ -971,6 +1001,8 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
   private static abstract class Queue<TKey extends Comparable<TKey>>
       extends AvlLinkedNode<Queue<TKey>> implements QueueInterface {
+    private final ProcedureEventQueue event;
+
     private boolean suspended = false;
 
     private long exclusiveLockProcIdOwner = Long.MIN_VALUE;
@@ -986,6 +1018,7 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     public Queue(TKey key, int priority) {
       this.key = key;
       this.priority = priority;
+      this.event = new ProcedureEventQueue();
     }
 
     protected TKey getKey() {
@@ -994,6 +1027,10 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
 
     protected int getPriority() {
       return priority;
+    }
+
+    public ProcedureEventQueue getEvent() {
+      return event;
     }
 
     /**
@@ -1012,54 +1049,54 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
     // ======================================================================
     //  Read/Write Locking helpers
     // ======================================================================
-    public synchronized boolean isLocked() {
+    public boolean isLocked() {
       return hasExclusiveLock() || sharedLock > 0;
     }
 
-    public synchronized boolean hasExclusiveLock() {
+    public boolean hasExclusiveLock() {
       return this.exclusiveLockProcIdOwner != Long.MIN_VALUE;
     }
 
-    public synchronized boolean trySharedLock() {
+    public boolean trySharedLock(final Procedure proc) {
       if (hasExclusiveLock()) return false;
       sharedLock++;
       return true;
     }
 
-    public synchronized boolean releaseSharedLock() {
+    public boolean releaseSharedLock() {
       return --sharedLock == 0;
     }
 
-    protected synchronized boolean isSingleSharedLock() {
+    protected boolean isSingleSharedLock() {
       return sharedLock == 1;
     }
 
-    public synchronized boolean isLockOwner(long procId) {
+    public boolean isLockOwner(long procId) {
       return exclusiveLockProcIdOwner == procId;
     }
 
-    public synchronized boolean hasParentLock(final Procedure proc) {
+    public boolean hasParentLock(final Procedure proc) {
       return proc.hasParent() &&
         (isLockOwner(proc.getParentProcId()) || isLockOwner(proc.getRootProcId()));
     }
 
-    public synchronized boolean hasLockAccess(final Procedure proc) {
+    public boolean hasLockAccess(final Procedure proc) {
       return isLockOwner(proc.getProcId()) || hasParentLock(proc);
     }
 
-    public synchronized boolean tryExclusiveLock(final Procedure proc) {
+    public boolean tryExclusiveLock(final Procedure proc) {
       if (isLocked()) return hasLockAccess(proc);
       exclusiveLockProcIdOwner = proc.getProcId();
       return true;
     }
 
-    public synchronized void releaseExclusiveLock() {
+    public void releaseExclusiveLock() {
       exclusiveLockProcIdOwner = Long.MIN_VALUE;
     }
 
     // This should go away when we have the new AM and its events
     // and we move xlock to the lock-event-queue.
-    public synchronized boolean isAvailable() {
+    public boolean isAvailable() {
       return !hasExclusiveLock() && !isEmpty();
     }
 
