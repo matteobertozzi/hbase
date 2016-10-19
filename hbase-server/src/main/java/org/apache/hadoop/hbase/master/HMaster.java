@@ -1019,11 +1019,13 @@ public class HMaster extends HRegionServer implements MasterServices {
         MasterProcedureConstants.DEFAULT_EXECUTOR_ABORT_ON_CORRUPTION);
     procedureStore.start(numThreads);
     procedureExecutor.start(numThreads, abortOnCorruption);
+    procEnv.getRemoteDispatcher().start();
   }
 
   private void stopProcedureExecutor() {
     if (procedureExecutor != null) {
       configurationManager.deregisterObserver(procedureExecutor.getEnvironment());
+      procedureExecutor.getEnvironment().getRemoteDispatcher().stop();
       procedureExecutor.stop();
       procedureExecutor = null;
     }

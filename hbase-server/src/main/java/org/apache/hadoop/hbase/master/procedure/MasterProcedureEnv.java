@@ -94,12 +94,19 @@ public class MasterProcedureEnv implements ConfigurationObserver {
     }
   }
 
+  private final RSProcedureDispatcher remoteDispatcher;
   private final MasterProcedureScheduler procSched;
   private final MasterServices master;
 
   public MasterProcedureEnv(final MasterServices master) {
+    this(master, new RSProcedureDispatcher(master));
+  }
+
+  public MasterProcedureEnv(final MasterServices master,
+      final RSProcedureDispatcher remoteDispatcher) {
     this.master = master;
     this.procSched = new MasterProcedureScheduler(master.getConfiguration());
+    this.remoteDispatcher = remoteDispatcher;
   }
 
   public User getRequestUser() {
@@ -128,6 +135,10 @@ public class MasterProcedureEnv implements ConfigurationObserver {
 
   public MasterProcedureScheduler getProcedureScheduler() {
     return procSched;
+  }
+
+  public RSProcedureDispatcher getRemoteDispatcher() {
+    return remoteDispatcher;
   }
 
   public boolean isRunning() {

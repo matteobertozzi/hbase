@@ -255,6 +255,16 @@ message UpdateConfigurationRequest {
 message UpdateConfigurationResponse {
 }
 
+message ExecuteProceduresRequest {
+  repeated OpenRegionRequest open_region = 1;
+  repeated CloseRegionRequest close_region = 2;
+}
+
+message ExecuteProceduresResponse {
+  repeated OpenRegionResponse open_region = 1;
+  repeated CloseRegionResponse close_region = 2;
+}
+
 service AdminService {
   rpc GetRegionInfo(GetRegionInfoRequest)
     returns(GetRegionInfoResponse);
@@ -306,4 +316,7 @@ service AdminService {
 
   rpc UpdateConfiguration(UpdateConfigurationRequest)
     returns(UpdateConfigurationResponse);
+
+  rpc ExecuteProcedures(ExecuteProceduresRequest)
+    returns(ExecuteProceduresResponse);
 }
