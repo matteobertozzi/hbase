@@ -1305,10 +1305,8 @@ public interface Admin extends Abortable, Closeable {
    * @throws SnapshotCreationException if snapshot creation failed
    * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
    */
-  void snapshot(final String snapshotName,
-      final TableName tableName,
-      SnapshotType type) throws IOException, SnapshotCreationException,
-      IllegalArgumentException;
+  void snapshot(final String snapshotName, final TableName tableName, SnapshotType type)
+      throws IOException, SnapshotCreationException, IllegalArgumentException;
 
   /**
    * Take a snapshot and wait for the server to complete that snapshot (blocking). Only a single
@@ -1332,6 +1330,43 @@ public interface Admin extends Abortable, Closeable {
       throws IOException, SnapshotCreationException, IllegalArgumentException;
 
   /**
+   * Take a snapshot without waiting for the server to complete that snapshot (asynchronous)
+   * You can use Future.get(long, TimeUnit) to wait on the operation to complete.
+   * It may throw ExecutionException if there was an error while executing the operation
+   * or TimeoutException in case the wait timeout was not long enough to allow the
+   * operation to complete.
+   *
+   * @param snapshotName name to give the snapshot on the filesystem. Must be unique from all other
+   * snapshots stored on the cluster
+   * @param tableName name of the table to snapshot
+   * @param type type of snapshot to take
+   * @throws IOException if the snapshot did not succeed or we lose contact with the master.
+   * @throws SnapshotCreationException if snapshot creation failed
+   * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
+   * @return the result of the async creation. You can use Future.get(long, TimeUnit)
+   *    to wait on the operation to complete.
+   */
+  Future<Void> snapshotAsync(String snapshotName, TableName tableName, SnapshotType type)
+      throws IOException, SnapshotCreationException, IllegalArgumentException;
+
+  /**
+   * Take a snapshot without waiting for the server to complete that snapshot (asynchronous)
+   * You can use Future.get(long, TimeUnit) to wait on the operation to complete.
+   * It may throw ExecutionException if there was an error while executing the operation
+   * or TimeoutException in case the wait timeout was not long enough to allow the
+   * operation to complete.
+   *
+   * @param snapshot snapshot to take
+   * @throws IOException if the snapshot did not succeed or we lose contact with the master.
+   * @throws SnapshotCreationException if snapshot creation failed
+   * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
+   * @return the result of the async creation. You can use Future.get(long, TimeUnit)
+   *    to wait on the operation to complete.
+   */
+  Future<Void> snapshotAsync(SnapshotDescription snapshot)
+      throws IOException, SnapshotCreationException, IllegalArgumentException;
+
+  /**
    * Take a snapshot without waiting for the server to complete that snapshot (asynchronous) Only a
    * single snapshot should be taken at a time, or results may be undefined.
    *
@@ -1340,6 +1375,7 @@ public interface Admin extends Abortable, Closeable {
    * @throws SnapshotCreationException if snapshot creation failed
    * @throws IllegalArgumentException if the snapshot request is formatted incorrectly
    */
+  @Deprecated
   void takeSnapshotAsync(SnapshotDescription snapshot)
       throws IOException, SnapshotCreationException;
 

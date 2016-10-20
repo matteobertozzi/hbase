@@ -2322,9 +2322,8 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void snapshot(final String snapshotName,
-                       final TableName tableName) throws IOException,
-      SnapshotCreationException, IllegalArgumentException {
+  public void snapshot(final String snapshotName, final TableName tableName)
+      throws IOException, SnapshotCreationException, IllegalArgumentException {
     snapshot(snapshotName, tableName, SnapshotType.FLUSH);
   }
 
@@ -2335,75 +2334,65 @@ public class HBaseAdmin implements Admin {
   }
 
   @Override
-  public void snapshot(final String snapshotName, final TableName tableName,
-      SnapshotType type)
+  public void snapshot(final String snapshotName, final TableName tableName, SnapshotType type)
       throws IOException, SnapshotCreationException, IllegalArgumentException {
     snapshot(new SnapshotDescription(snapshotName, tableName, type));
   }
 
   @Override
-  public void snapshot(SnapshotDescription snapshotDesc)
+  public void snapshot(final SnapshotDescription snapshotDesc)
       throws IOException, SnapshotCreationException, IllegalArgumentException {
-    // actually take the snapshot
-    HBaseProtos.SnapshotDescription snapshot =
-      ProtobufUtil.createHBaseProtosSnapshotDesc(snapshotDesc);
-    SnapshotResponse response = asyncSnapshot(snapshot);
-    final IsSnapshotDoneRequest request =
-        IsSnapshotDoneRequest.newBuilder().setSnapshot(snapshot).build();
-    IsSnapshotDoneResponse done = null;
-    long start = EnvironmentEdgeManager.currentTime();
-    long max = response.getExpectedTimeout();
-    long maxPauseTime = max / this.numRetries;
-    int tries = 0;
-    LOG.debug("Waiting a max of " + max + " ms for snapshot '" +
-        ClientSnapshotDescriptionUtils.toString(snapshot) + "'' to complete. (max " +
-        maxPauseTime + " ms per retry)");
-    while (tries == 0
-        || ((EnvironmentEdgeManager.currentTime() - start) < max && !done.getDone())) {
-      try {
-        // sleep a backoff <= pauseTime amount
-        long sleep = getPauseTime(tries++);
-        sleep = sleep > maxPauseTime ? maxPauseTime : sleep;
-        LOG.debug("(#" + tries + ") Sleeping: " + sleep +
-          "ms while waiting for snapshot completion.");
-        Thread.sleep(sleep);
-      } catch (InterruptedException e) {
-        throw (InterruptedIOException)new InterruptedIOException("Interrupted").initCause(e);
-      }
-      LOG.debug("Getting current status of snapshot from master...");
-      done = executeCallable(new MasterCallable<IsSnapshotDoneResponse>(getConnection(),
-          getRpcControllerFactory()) {
-        @Override
-        protected IsSnapshotDoneResponse rpcCall() throws Exception {
-          return master.isSnapshotDone(getRpcController(), request);
-        }
-      });
+    get(snapshotAsync(snapshotDesc), syncWaitTimeout, TimeUnit.MILLISECONDS);
+  }
+
+  @Override
+  public Future<Void> snapshotAsync(String snapshotName, TableName tableName, SnapshotType type)
+      throws IOException, SnapshotCreationException, IllegalArgumentException {
+    return snapshotAsync(new SnapshotDescription(snapshotName, tableName, type));
+  }
+
+  @Override
+  public Future<Void> snapshotAsync(final SnapshotDescription snapshot)
+      throws IOException, SnapshotCreationException {
+    final HBaseProtos.SnapshotDescription snapshotProto =
+        ProtobufUtil.createHBaseProtosSnapshotDesc(snapshot);
+    ClientSnapshotDescriptionUtils.assertSnapshotRequestIsValid(snapshotProto);
+    final SnapshotRequest request = SnapshotRequest.newBuilder().setSnapshot(snapshotProto).build();
+    final SnapshotResponse response = executeCallable(
+       new MasterCallable<SnapshotResponse>(getConnection(), getRpcControllerFactory()) {
+         @Override
+         protected SnapshotResponse rpcCall() throws Exception {
+           return master.snapshot(getRpcController(), request);
+         }
+       });
+    return new SnapshotFuture(this, snapshot, response);
+  }
+
+  private static class SnapshotFuture extends ProcedureFuture<Void> {
+    private final SnapshotDescription snapshot;
+
+    public SnapshotFuture(final HBaseAdmin admin, final SnapshotDescription snapshot,
+        final SnapshotResponse response) {
+      super(admin, response.hasProcId() ? response.getProcId() : null);
+      this.snapshot = snapshot;
     }
-    if (!done.getDone()) {
-      throw new SnapshotCreationException("Snapshot '" + snapshot.getName()
-          + "' wasn't completed in expectedTime:" + max + " ms", snapshotDesc);
+
+    @Override
+    protected Void waitOperationResult(final long deadlineTs)
+        throws IOException, TimeoutException {
+      return null;
+    }
+
+    @Override
+    public String toString() {
+      return "Operation: SNAPSHOT " + snapshot;
     }
   }
 
   @Override
-  public void takeSnapshotAsync(SnapshotDescription snapshotDesc) throws IOException,
-      SnapshotCreationException {
-    asyncSnapshot(ProtobufUtil.createHBaseProtosSnapshotDesc(snapshotDesc));
-  }
-
-  private SnapshotResponse asyncSnapshot(HBaseProtos.SnapshotDescription snapshot)
-      throws IOException {
-    ClientSnapshotDescriptionUtils.assertSnapshotRequestIsValid(snapshot);
-    final SnapshotRequest request = SnapshotRequest.newBuilder().setSnapshot(snapshot)
-        .build();
-    // run the snapshot on the master
-    return executeCallable(new MasterCallable<SnapshotResponse>(getConnection(),
-        getRpcControllerFactory()) {
-      @Override
-      protected SnapshotResponse rpcCall() throws Exception {
-        return master.snapshot(getRpcController(), request);
-      }
-    });
+  public void takeSnapshotAsync(SnapshotDescription snapshotDesc)
+      throws IOException, SnapshotCreationException {
+    snapshotAsync(snapshotDesc);
   }
 
   @Override

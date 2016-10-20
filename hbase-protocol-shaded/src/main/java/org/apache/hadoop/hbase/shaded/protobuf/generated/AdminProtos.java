@@ -27273,7 +27273,7 @@ public final class AdminProtos {
               return impl.updateFavoredNodes(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest)request);
             case 17:
               return impl.updateConfiguration(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest)request);
-            case 17:
+            case 18:
               return impl.executeProcedures(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresRequest)request);
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -27325,7 +27325,7 @@ public final class AdminProtos {
               return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest.getDefaultInstance();
             case 17:
               return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest.getDefaultInstance();
-            case 17:
+            case 18:
               return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresRequest.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -27377,7 +27377,7 @@ public final class AdminProtos {
               return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesResponse.getDefaultInstance();
             case 17:
               return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationResponse.getDefaultInstance();
-            case 17:
+            case 18:
               return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresResponse.getDefaultInstance();
             default:
               throw new java.lang.AssertionError("Can't get here.");
@@ -27651,7 +27651,7 @@ public final class AdminProtos {
             org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationResponse>specializeCallback(
               done));
           return;
-        case 17:
+        case 18:
           this.executeProcedures(controller, (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresRequest)request,
             org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcUtil.<org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresResponse>specializeCallback(
               done));
@@ -27706,7 +27706,7 @@ public final class AdminProtos {
           return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesRequest.getDefaultInstance();
         case 17:
           return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest.getDefaultInstance();
-        case 17:
+        case 18:
           return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresRequest.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
@@ -27758,7 +27758,7 @@ public final class AdminProtos {
           return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateFavoredNodesResponse.getDefaultInstance();
         case 17:
           return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationResponse.getDefaultInstance();
-        case 17:
+        case 18:
           return org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresResponse.getDefaultInstance();
         default:
           throw new java.lang.AssertionError("Can't get here.");
@@ -28056,7 +28056,7 @@ public final class AdminProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresRequest request,
           org.apache.hadoop.hbase.shaded.com.google.protobuf.RpcCallback<org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresResponse> done) {
         channel.callMethod(
-          getDescriptor().getMethods().get(17),
+          getDescriptor().getMethods().get(18),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresResponse.getDefaultInstance(),
@@ -28397,7 +28397,7 @@ public final class AdminProtos {
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresRequest request)
           throws org.apache.hadoop.hbase.shaded.com.google.protobuf.ServiceException {
         return (org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresResponse) channel.callBlockingMethod(
-          getDescriptor().getMethods().get(17),
+          getDescriptor().getMethods().get(18),
           controller,
           request,
           org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ExecuteProceduresResponse.getDefaultInstance());
@@ -28694,96 +28694,55 @@ public final class AdminProtos {
       "B\n\025GetServerInfoResponse\022)\n\013server_info\030" +
       "\001 \002(\0132\024.hbase.pb.ServerInfo\"\034\n\032UpdateCon" +
       "figurationRequest\"\035\n\033UpdateConfiguration" +
-<<<<<<< HEAD
-      "Response2\353\013\n\014AdminService\022P\n\rGetRegionIn" +
-      "fo\022\036.hbase.pb.GetRegionInfoRequest\032\037.hba" +
-      "se.pb.GetRegionInfoResponse\022M\n\014GetStoreF",
-      "ile\022\035.hbase.pb.GetStoreFileRequest\032\036.hba" +
-      "se.pb.GetStoreFileResponse\022V\n\017GetOnlineR" +
-      "egion\022 .hbase.pb.GetOnlineRegionRequest\032" +
-      "!.hbase.pb.GetOnlineRegionResponse\022G\n\nOp" +
-      "enRegion\022\033.hbase.pb.OpenRegionRequest\032\034." +
-      "hbase.pb.OpenRegionResponse\022M\n\014WarmupReg" +
-      "ion\022\035.hbase.pb.WarmupRegionRequest\032\036.hba" +
-      "se.pb.WarmupRegionResponse\022J\n\013CloseRegio" +
-      "n\022\034.hbase.pb.CloseRegionRequest\032\035.hbase." +
-      "pb.CloseRegionResponse\022b\n\023CloseRegionFor",
-      "Split\022$.hbase.pb.CloseRegionForSplitRequ" +
-      "est\032%.hbase.pb.CloseRegionForSplitRespon" +
-      "se\022J\n\013FlushRegion\022\034.hbase.pb.FlushRegion" +
-      "Request\032\035.hbase.pb.FlushRegionResponse\022J" +
-      "\n\013SplitRegion\022\034.hbase.pb.SplitRegionRequ" +
-      "est\032\035.hbase.pb.SplitRegionResponse\022P\n\rCo" +
-      "mpactRegion\022\036.hbase.pb.CompactRegionRequ" +
-      "est\032\037.hbase.pb.CompactRegionResponse\022M\n\014" +
-      "MergeRegions\022\035.hbase.pb.MergeRegionsRequ" +
-      "est\032\036.hbase.pb.MergeRegionsResponse\022\\\n\021R",
-      "eplicateWALEntry\022\".hbase.pb.ReplicateWAL" +
-      "EntryRequest\032#.hbase.pb.ReplicateWALEntr" +
-      "yResponse\022Q\n\006Replay\022\".hbase.pb.Replicate" +
-      "WALEntryRequest\032#.hbase.pb.ReplicateWALE" +
-      "ntryResponse\022P\n\rRollWALWriter\022\036.hbase.pb" +
-      ".RollWALWriterRequest\032\037.hbase.pb.RollWAL" +
-      "WriterResponse\022P\n\rGetServerInfo\022\036.hbase." +
-      "pb.GetServerInfoRequest\032\037.hbase.pb.GetSe" +
-      "rverInfoResponse\022G\n\nStopServer\022\033.hbase.p" +
-      "b.StopServerRequest\032\034.hbase.pb.StopServe",
-      "rResponse\022_\n\022UpdateFavoredNodes\022#.hbase." +
-      "pb.UpdateFavoredNodesRequest\032$.hbase.pb." +
-      "UpdateFavoredNodesResponse\022b\n\023UpdateConf" +
-      "iguration\022$.hbase.pb.UpdateConfiguration" +
-      "Request\032%.hbase.pb.UpdateConfigurationRe" +
-      "sponseBH\n1org.apache.hadoop.hbase.shaded" +
-      ".protobuf.generatedB\013AdminProtosH\001\210\001\001\240\001\001"
-=======
       "Response\"\200\001\n\030ExecuteProceduresRequest\0220\n" +
       "\013open_region\030\001 \003(\0132\033.hbase.pb.OpenRegion" +
-      "Request\0222\n\014close_region\030\002 \003(\0132\034.hbase.pb" +
+      "Request\0222\n\014close_region\030\002 \003(\0132\034.hbase.pb",
       ".CloseRegionRequest\"\203\001\n\031ExecuteProcedure" +
       "sResponse\0221\n\013open_region\030\001 \003(\0132\034.hbase.p" +
-      "b.OpenRegionResponse\0223\n\014close_region\030\002 \003",
-      "(\0132\035.hbase.pb.CloseRegionResponse2\345\013\n\014Ad" +
+      "b.OpenRegionResponse\0223\n\014close_region\030\002 \003" +
+      "(\0132\035.hbase.pb.CloseRegionResponse2\311\014\n\014Ad" +
       "minService\022P\n\rGetRegionInfo\022\036.hbase.pb.G" +
       "etRegionInfoRequest\032\037.hbase.pb.GetRegion" +
       "InfoResponse\022M\n\014GetStoreFile\022\035.hbase.pb." +
       "GetStoreFileRequest\032\036.hbase.pb.GetStoreF" +
       "ileResponse\022V\n\017GetOnlineRegion\022 .hbase.p" +
-      "b.GetOnlineRegionRequest\032!.hbase.pb.GetO" +
+      "b.GetOnlineRegionRequest\032!.hbase.pb.GetO",
       "nlineRegionResponse\022G\n\nOpenRegion\022\033.hbas" +
       "e.pb.OpenRegionRequest\032\034.hbase.pb.OpenRe" +
-      "gionResponse\022M\n\014WarmupRegion\022\035.hbase.pb.",
+      "gionResponse\022M\n\014WarmupRegion\022\035.hbase.pb." +
       "WarmupRegionRequest\032\036.hbase.pb.WarmupReg" +
       "ionResponse\022J\n\013CloseRegion\022\034.hbase.pb.Cl" +
       "oseRegionRequest\032\035.hbase.pb.CloseRegionR" +
-      "esponse\022J\n\013FlushRegion\022\034.hbase.pb.FlushR" +
-      "egionRequest\032\035.hbase.pb.FlushRegionRespo" +
-      "nse\022J\n\013SplitRegion\022\034.hbase.pb.SplitRegio" +
-      "nRequest\032\035.hbase.pb.SplitRegionResponse\022" +
-      "P\n\rCompactRegion\022\036.hbase.pb.CompactRegio" +
-      "nRequest\032\037.hbase.pb.CompactRegionRespons" +
-      "e\022M\n\014MergeRegions\022\035.hbase.pb.MergeRegion",
-      "sRequest\032\036.hbase.pb.MergeRegionsResponse" +
-      "\022\\\n\021ReplicateWALEntry\022\".hbase.pb.Replica" +
-      "teWALEntryRequest\032#.hbase.pb.ReplicateWA" +
-      "LEntryResponse\022Q\n\006Replay\022\".hbase.pb.Repl" +
-      "icateWALEntryRequest\032#.hbase.pb.Replicat" +
-      "eWALEntryResponse\022P\n\rRollWALWriter\022\036.hba" +
-      "se.pb.RollWALWriterRequest\032\037.hbase.pb.Ro" +
-      "llWALWriterResponse\022P\n\rGetServerInfo\022\036.h" +
-      "base.pb.GetServerInfoRequest\032\037.hbase.pb." +
-      "GetServerInfoResponse\022G\n\nStopServer\022\033.hb",
-      "ase.pb.StopServerRequest\032\034.hbase.pb.Stop" +
-      "ServerResponse\022_\n\022UpdateFavoredNodes\022#.h" +
-      "base.pb.UpdateFavoredNodesRequest\032$.hbas" +
-      "e.pb.UpdateFavoredNodesResponse\022b\n\023Updat" +
-      "eConfiguration\022$.hbase.pb.UpdateConfigur" +
-      "ationRequest\032%.hbase.pb.UpdateConfigurat" +
-      "ionResponse\022\\\n\021ExecuteProcedures\022\".hbase" +
-      ".pb.ExecuteProceduresRequest\032#.hbase.pb." +
-      "ExecuteProceduresResponseBH\n1org.apache." +
-      "hadoop.hbase.shaded.protobuf.generatedB\013",
-      "AdminProtosH\001\210\001\001\240\001\001"
->>>>>>> 2f04724... remote dispatch
+      "esponse\022b\n\023CloseRegionForSplit\022$.hbase.p" +
+      "b.CloseRegionForSplitRequest\032%.hbase.pb." +
+      "CloseRegionForSplitResponse\022J\n\013FlushRegi" +
+      "on\022\034.hbase.pb.FlushRegionRequest\032\035.hbase",
+      ".pb.FlushRegionResponse\022J\n\013SplitRegion\022\034" +
+      ".hbase.pb.SplitRegionRequest\032\035.hbase.pb." +
+      "SplitRegionResponse\022P\n\rCompactRegion\022\036.h" +
+      "base.pb.CompactRegionRequest\032\037.hbase.pb." +
+      "CompactRegionResponse\022M\n\014MergeRegions\022\035." +
+      "hbase.pb.MergeRegionsRequest\032\036.hbase.pb." +
+      "MergeRegionsResponse\022\\\n\021ReplicateWALEntr" +
+      "y\022\".hbase.pb.ReplicateWALEntryRequest\032#." +
+      "hbase.pb.ReplicateWALEntryResponse\022Q\n\006Re" +
+      "play\022\".hbase.pb.ReplicateWALEntryRequest",
+      "\032#.hbase.pb.ReplicateWALEntryResponse\022P\n" +
+      "\rRollWALWriter\022\036.hbase.pb.RollWALWriterR" +
+      "equest\032\037.hbase.pb.RollWALWriterResponse\022" +
+      "P\n\rGetServerInfo\022\036.hbase.pb.GetServerInf" +
+      "oRequest\032\037.hbase.pb.GetServerInfoRespons" +
+      "e\022G\n\nStopServer\022\033.hbase.pb.StopServerReq" +
+      "uest\032\034.hbase.pb.StopServerResponse\022_\n\022Up" +
+      "dateFavoredNodes\022#.hbase.pb.UpdateFavore" +
+      "dNodesRequest\032$.hbase.pb.UpdateFavoredNo" +
+      "desResponse\022b\n\023UpdateConfiguration\022$.hba",
+      "se.pb.UpdateConfigurationRequest\032%.hbase" +
+      ".pb.UpdateConfigurationResponse\022\\\n\021Execu" +
+      "teProcedures\022\".hbase.pb.ExecuteProcedure" +
+      "sRequest\032#.hbase.pb.ExecuteProceduresRes" +
+      "ponseBH\n1org.apache.hadoop.hbase.shaded." +
+      "protobuf.generatedB\013AdminProtosH\001\210\001\001\240\001\001"
     };
     org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -29028,13 +28987,13 @@ public final class AdminProtos {
         internal_static_hbase_pb_UpdateConfigurationResponse_descriptor,
         new java.lang.String[] { });
     internal_static_hbase_pb_ExecuteProceduresRequest_descriptor =
-      getDescriptor().getMessageTypes().get(34);
+      getDescriptor().getMessageTypes().get(36);
     internal_static_hbase_pb_ExecuteProceduresRequest_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_ExecuteProceduresRequest_descriptor,
         new java.lang.String[] { "OpenRegion", "CloseRegion", });
     internal_static_hbase_pb_ExecuteProceduresResponse_descriptor =
-      getDescriptor().getMessageTypes().get(35);
+      getDescriptor().getMessageTypes().get(37);
     internal_static_hbase_pb_ExecuteProceduresResponse_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_ExecuteProceduresResponse_descriptor,

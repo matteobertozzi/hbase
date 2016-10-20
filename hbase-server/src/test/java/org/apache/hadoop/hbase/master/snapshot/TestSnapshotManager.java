@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.MetricsMaster;
+import org.apache.hadoop.hbase.master.SnapshotSentinel;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.HFileLinkCleaner;
 import org.apache.hadoop.hbase.procedure.ProcedureCoordinator;
@@ -75,14 +76,16 @@ public class TestSnapshotManager {
     Mockito.when(services.getMasterFileSystem()).thenReturn(mfs);
     Mockito.when(mfs.getFileSystem()).thenReturn(fs);
     Mockito.when(mfs.getRootDir()).thenReturn(UTIL.getDataTestDir());
-    return new SnapshotManager(services, metrics, coordinator, pool);
+    SnapshotManager snapshotManager = new SnapshotManager();
+    snapshotManager.initialize(services, metrics);
+    return snapshotManager;
   }
 
   @Test
   public void testInProcess() throws KeeperException, IOException {
     TableName tableName = TableName.valueOf("testTable");
     SnapshotManager manager = getNewManager();
-    TakeSnapshotHandler handler = Mockito.mock(TakeSnapshotHandler.class);
+    SnapshotSentinel handler = Mockito.mock(SnapshotSentinel.class);
     assertFalse("Manager is in process when there is no current handler",
         manager.isTakingSnapshot(tableName));
     manager.setSnapshotHandlerForTesting(tableName, handler);

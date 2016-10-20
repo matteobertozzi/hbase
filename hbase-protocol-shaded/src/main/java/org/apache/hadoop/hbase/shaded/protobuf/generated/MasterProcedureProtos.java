@@ -1716,6 +1716,87 @@ public final class MasterProcedureProtos {
   }
 
   /**
+   * Protobuf enum {@code hbase.pb.TakeSnapshotState}
+   */
+  public enum TakeSnapshotState
+      implements org.apache.hadoop.hbase.shaded.com.google.protobuf.ProtocolMessageEnum {
+    /**
+     * <code>TAKE_SNAPSHOT_PRE_OPERATION = 1;</code>
+     */
+    TAKE_SNAPSHOT_PRE_OPERATION(1),
+    ;
+
+    /**
+     * <code>TAKE_SNAPSHOT_PRE_OPERATION = 1;</code>
+     */
+    public static final int TAKE_SNAPSHOT_PRE_OPERATION_VALUE = 1;
+
+
+    public final int getNumber() {
+      return value;
+    }
+
+    /**
+     * @deprecated Use {@link #forNumber(int)} instead.
+     */
+    @java.lang.Deprecated
+    public static TakeSnapshotState valueOf(int value) {
+      return forNumber(value);
+    }
+
+    public static TakeSnapshotState forNumber(int value) {
+      switch (value) {
+        case 1: return TAKE_SNAPSHOT_PRE_OPERATION;
+        default: return null;
+      }
+    }
+
+    public static org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.EnumLiteMap<TakeSnapshotState>
+        internalGetValueMap() {
+      return internalValueMap;
+    }
+    private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.EnumLiteMap<
+        TakeSnapshotState> internalValueMap =
+          new org.apache.hadoop.hbase.shaded.com.google.protobuf.Internal.EnumLiteMap<TakeSnapshotState>() {
+            public TakeSnapshotState findValueByNumber(int number) {
+              return TakeSnapshotState.forNumber(number);
+            }
+          };
+
+    public final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.EnumValueDescriptor
+        getValueDescriptor() {
+      return getDescriptor().getValues().get(ordinal());
+    }
+    public final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptorForType() {
+      return getDescriptor();
+    }
+    public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.EnumDescriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.getDescriptor().getEnumTypes().get(14);
+    }
+
+    private static final TakeSnapshotState[] VALUES = values();
+
+    public static TakeSnapshotState valueOf(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.EnumValueDescriptor desc) {
+      if (desc.getType() != getDescriptor()) {
+        throw new java.lang.IllegalArgumentException(
+          "EnumValueDescriptor is not for this type.");
+      }
+      return VALUES[desc.getIndex()];
+    }
+
+    private final int value;
+
+    private TakeSnapshotState(int value) {
+      this.value = value;
+    }
+
+    // @@protoc_insertion_point(enum_scope:hbase.pb.TakeSnapshotState)
+  }
+
+  /**
    * Protobuf enum {@code hbase.pb.DispatchMergingRegionsState}
    */
   public enum DispatchMergingRegionsState
@@ -1809,7 +1890,7 @@ public final class MasterProcedureProtos {
     }
     public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.EnumDescriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.getDescriptor().getEnumTypes().get(14);
+      return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.getDescriptor().getEnumTypes().get(15);
     }
 
     private static final DispatchMergingRegionsState[] VALUES = values();
@@ -1971,7 +2052,7 @@ public final class MasterProcedureProtos {
     }
     public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.EnumDescriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.getDescriptor().getEnumTypes().get(15);
+      return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.getDescriptor().getEnumTypes().get(16);
     }
 
     private static final SplitTableRegionState[] VALUES = values();
@@ -2132,7 +2213,7 @@ public final class MasterProcedureProtos {
     }
     public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.EnumDescriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.getDescriptor().getEnumTypes().get(16);
+      return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.getDescriptor().getEnumTypes().get(17);
     }
 
     private static final ServerCrashState[] VALUES = values();
@@ -2231,7 +2312,7 @@ public final class MasterProcedureProtos {
     }
     public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.EnumDescriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.getDescriptor().getEnumTypes().get(17);
+      return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.getDescriptor().getEnumTypes().get(18);
     }
 
     private static final RegionTransitionState[] VALUES = values();
@@ -2321,7 +2402,7 @@ public final class MasterProcedureProtos {
     }
     public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.EnumDescriptor
         getDescriptor() {
-      return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.getDescriptor().getEnumTypes().get(18);
+      return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.getDescriptor().getEnumTypes().get(19);
     }
 
     private static final MoveRegionState[] VALUES = values();
@@ -20027,6 +20108,811 @@ public final class MasterProcedureProtos {
 
   }
 
+  public interface TakeSnapshotStateDataOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:hbase.pb.TakeSnapshotStateData)
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>required .hbase.pb.UserInformation user_info = 1;</code>
+     */
+    boolean hasUserInfo();
+    /**
+     * <code>required .hbase.pb.UserInformation user_info = 1;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation getUserInfo();
+    /**
+     * <code>required .hbase.pb.UserInformation user_info = 1;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformationOrBuilder getUserInfoOrBuilder();
+
+    /**
+     * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
+     */
+    boolean hasSnapshot();
+    /**
+     * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription getSnapshot();
+    /**
+     * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
+     */
+    org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescriptionOrBuilder getSnapshotOrBuilder();
+  }
+  /**
+   * Protobuf type {@code hbase.pb.TakeSnapshotStateData}
+   */
+  public  static final class TakeSnapshotStateData extends
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:hbase.pb.TakeSnapshotStateData)
+      TakeSnapshotStateDataOrBuilder {
+    // Use TakeSnapshotStateData.newBuilder() to construct.
+    private TakeSnapshotStateData(org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private TakeSnapshotStateData() {
+    }
+
+    @java.lang.Override
+    public final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet
+    getUnknownFields() {
+      return this.unknownFields;
+    }
+    private TakeSnapshotStateData(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      this();
+      int mutable_bitField0_ = 0;
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet.Builder unknownFields =
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet.newBuilder();
+      try {
+        boolean done = false;
+        while (!done) {
+          int tag = input.readTag();
+          switch (tag) {
+            case 0:
+              done = true;
+              break;
+            default: {
+              if (!parseUnknownField(input, unknownFields,
+                                     extensionRegistry, tag)) {
+                done = true;
+              }
+              break;
+            }
+            case 10: {
+              org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000001) == 0x00000001)) {
+                subBuilder = userInfo_.toBuilder();
+              }
+              userInfo_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(userInfo_);
+                userInfo_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000001;
+              break;
+            }
+            case 18: {
+              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.Builder subBuilder = null;
+              if (((bitField0_ & 0x00000002) == 0x00000002)) {
+                subBuilder = snapshot_.toBuilder();
+              }
+              snapshot_ = input.readMessage(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.PARSER, extensionRegistry);
+              if (subBuilder != null) {
+                subBuilder.mergeFrom(snapshot_);
+                snapshot_ = subBuilder.buildPartial();
+              }
+              bitField0_ |= 0x00000002;
+              break;
+            }
+          }
+        }
+      } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
+        throw e.setUnfinishedMessage(this);
+      } catch (java.io.IOException e) {
+        throw new org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException(
+            e).setUnfinishedMessage(this);
+      } finally {
+        this.unknownFields = unknownFields.build();
+        makeExtensionsImmutable();
+      }
+    }
+    public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.internal_static_hbase_pb_TakeSnapshotStateData_descriptor;
+    }
+
+    protected org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.internal_static_hbase_pb_TakeSnapshotStateData_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData.class, org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData.Builder.class);
+    }
+
+    private int bitField0_;
+    public static final int USER_INFO_FIELD_NUMBER = 1;
+    private org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation userInfo_;
+    /**
+     * <code>required .hbase.pb.UserInformation user_info = 1;</code>
+     */
+    public boolean hasUserInfo() {
+      return ((bitField0_ & 0x00000001) == 0x00000001);
+    }
+    /**
+     * <code>required .hbase.pb.UserInformation user_info = 1;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation getUserInfo() {
+      return userInfo_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation.getDefaultInstance() : userInfo_;
+    }
+    /**
+     * <code>required .hbase.pb.UserInformation user_info = 1;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformationOrBuilder getUserInfoOrBuilder() {
+      return userInfo_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation.getDefaultInstance() : userInfo_;
+    }
+
+    public static final int SNAPSHOT_FIELD_NUMBER = 2;
+    private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription snapshot_;
+    /**
+     * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
+     */
+    public boolean hasSnapshot() {
+      return ((bitField0_ & 0x00000002) == 0x00000002);
+    }
+    /**
+     * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription getSnapshot() {
+      return snapshot_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.getDefaultInstance() : snapshot_;
+    }
+    /**
+     * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
+     */
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescriptionOrBuilder getSnapshotOrBuilder() {
+      return snapshot_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.getDefaultInstance() : snapshot_;
+    }
+
+    private byte memoizedIsInitialized = -1;
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      if (!hasUserInfo()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!hasSnapshot()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!getUserInfo().isInitialized()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      if (!getSnapshot().isInitialized()) {
+        memoizedIsInitialized = 0;
+        return false;
+      }
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    public void writeTo(org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        output.writeMessage(1, getUserInfo());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        output.writeMessage(2, getSnapshot());
+      }
+      unknownFields.writeTo(output);
+    }
+
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (((bitField0_ & 0x00000001) == 0x00000001)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeMessageSize(1, getUserInfo());
+      }
+      if (((bitField0_ & 0x00000002) == 0x00000002)) {
+        size += org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedOutputStream
+          .computeMessageSize(2, getSnapshot());
+      }
+      size += unknownFields.getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    private static final long serialVersionUID = 0L;
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData)) {
+        return super.equals(obj);
+      }
+      org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData other = (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData) obj;
+
+      boolean result = true;
+      result = result && (hasUserInfo() == other.hasUserInfo());
+      if (hasUserInfo()) {
+        result = result && getUserInfo()
+            .equals(other.getUserInfo());
+      }
+      result = result && (hasSnapshot() == other.hasSnapshot());
+      if (hasSnapshot()) {
+        result = result && getSnapshot()
+            .equals(other.getSnapshot());
+      }
+      result = result && unknownFields.equals(other.unknownFields);
+      return result;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptorForType().hashCode();
+      if (hasUserInfo()) {
+        hash = (37 * hash) + USER_INFO_FIELD_NUMBER;
+        hash = (53 * hash) + getUserInfo().hashCode();
+      }
+      if (hasSnapshot()) {
+        hash = (37 * hash) + SNAPSHOT_FIELD_NUMBER;
+        hash = (53 * hash) + getSnapshot().hashCode();
+      }
+      hash = (29 * hash) + unknownFields.hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString data)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ByteString data,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData parseFrom(byte[] data)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData parseFrom(
+        byte[] data,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData parseFrom(
+        java.io.InputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData parseDelimitedFrom(
+        java.io.InputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData parseFrom(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code hbase.pb.TakeSnapshotStateData}
+     */
+    public static final class Builder extends
+        org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:hbase.pb.TakeSnapshotStateData)
+        org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateDataOrBuilder {
+      public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.internal_static_hbase_pb_TakeSnapshotStateData_descriptor;
+      }
+
+      protected org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.internal_static_hbase_pb_TakeSnapshotStateData_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData.class, org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData.Builder.class);
+      }
+
+      // Construct using org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData.newBuilder()
+      private Builder() {
+        maybeForceBuilderInitialization();
+      }
+
+      private Builder(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+        maybeForceBuilderInitialization();
+      }
+      private void maybeForceBuilderInitialization() {
+        if (org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3
+                .alwaysUseFieldBuilders) {
+          getUserInfoFieldBuilder();
+          getSnapshotFieldBuilder();
+        }
+      }
+      public Builder clear() {
+        super.clear();
+        if (userInfoBuilder_ == null) {
+          userInfo_ = null;
+        } else {
+          userInfoBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000001);
+        if (snapshotBuilder_ == null) {
+          snapshot_ = null;
+        } else {
+          snapshotBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+
+      public org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.internal_static_hbase_pb_TakeSnapshotStateData_descriptor;
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData getDefaultInstanceForType() {
+        return org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData.getDefaultInstance();
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData build() {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData buildPartial() {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData result = new org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData(this);
+        int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000001) == 0x00000001)) {
+          to_bitField0_ |= 0x00000001;
+        }
+        if (userInfoBuilder_ == null) {
+          result.userInfo_ = userInfo_;
+        } else {
+          result.userInfo_ = userInfoBuilder_.build();
+        }
+        if (((from_bitField0_ & 0x00000002) == 0x00000002)) {
+          to_bitField0_ |= 0x00000002;
+        }
+        if (snapshotBuilder_ == null) {
+          result.snapshot_ = snapshot_;
+        } else {
+          result.snapshot_ = snapshotBuilder_.build();
+        }
+        result.bitField0_ = to_bitField0_;
+        onBuilt();
+        return result;
+      }
+
+      public Builder clone() {
+        return (Builder) super.clone();
+      }
+      public Builder setField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.setField(field, value);
+      }
+      public Builder clearField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return (Builder) super.clearField(field);
+      }
+      public Builder clearOneof(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return (Builder) super.clearOneof(oneof);
+      }
+      public Builder setRepeatedField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, Object value) {
+        return (Builder) super.setRepeatedField(field, index, value);
+      }
+      public Builder addRepeatedField(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FieldDescriptor field,
+          Object value) {
+        return (Builder) super.addRepeatedField(field, value);
+      }
+      public Builder mergeFrom(org.apache.hadoop.hbase.shaded.com.google.protobuf.Message other) {
+        if (other instanceof org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData) {
+          return mergeFrom((org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData other) {
+        if (other == org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData.getDefaultInstance()) return this;
+        if (other.hasUserInfo()) {
+          mergeUserInfo(other.getUserInfo());
+        }
+        if (other.hasSnapshot()) {
+          mergeSnapshot(other.getSnapshot());
+        }
+        this.mergeUnknownFields(other.unknownFields);
+        onChanged();
+        return this;
+      }
+
+      public final boolean isInitialized() {
+        if (!hasUserInfo()) {
+          return false;
+        }
+        if (!hasSnapshot()) {
+          return false;
+        }
+        if (!getUserInfo().isInitialized()) {
+          return false;
+        }
+        if (!getSnapshot().isInitialized()) {
+          return false;
+        }
+        return true;
+      }
+
+      public Builder mergeFrom(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData parsedMessage = null;
+        try {
+          parsedMessage = PARSER.parsePartialFrom(input, extensionRegistry);
+        } catch (org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException e) {
+          parsedMessage = (org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData) e.getUnfinishedMessage();
+          throw e.unwrapIOException();
+        } finally {
+          if (parsedMessage != null) {
+            mergeFrom(parsedMessage);
+          }
+        }
+        return this;
+      }
+      private int bitField0_;
+
+      private org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation userInfo_ = null;
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation, org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformationOrBuilder> userInfoBuilder_;
+      /**
+       * <code>required .hbase.pb.UserInformation user_info = 1;</code>
+       */
+      public boolean hasUserInfo() {
+        return ((bitField0_ & 0x00000001) == 0x00000001);
+      }
+      /**
+       * <code>required .hbase.pb.UserInformation user_info = 1;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation getUserInfo() {
+        if (userInfoBuilder_ == null) {
+          return userInfo_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation.getDefaultInstance() : userInfo_;
+        } else {
+          return userInfoBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>required .hbase.pb.UserInformation user_info = 1;</code>
+       */
+      public Builder setUserInfo(org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation value) {
+        if (userInfoBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          userInfo_ = value;
+          onChanged();
+        } else {
+          userInfoBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      /**
+       * <code>required .hbase.pb.UserInformation user_info = 1;</code>
+       */
+      public Builder setUserInfo(
+          org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation.Builder builderForValue) {
+        if (userInfoBuilder_ == null) {
+          userInfo_ = builderForValue.build();
+          onChanged();
+        } else {
+          userInfoBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      /**
+       * <code>required .hbase.pb.UserInformation user_info = 1;</code>
+       */
+      public Builder mergeUserInfo(org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation value) {
+        if (userInfoBuilder_ == null) {
+          if (((bitField0_ & 0x00000001) == 0x00000001) &&
+              userInfo_ != null &&
+              userInfo_ != org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation.getDefaultInstance()) {
+            userInfo_ =
+              org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation.newBuilder(userInfo_).mergeFrom(value).buildPartial();
+          } else {
+            userInfo_ = value;
+          }
+          onChanged();
+        } else {
+          userInfoBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000001;
+        return this;
+      }
+      /**
+       * <code>required .hbase.pb.UserInformation user_info = 1;</code>
+       */
+      public Builder clearUserInfo() {
+        if (userInfoBuilder_ == null) {
+          userInfo_ = null;
+          onChanged();
+        } else {
+          userInfoBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000001);
+        return this;
+      }
+      /**
+       * <code>required .hbase.pb.UserInformation user_info = 1;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation.Builder getUserInfoBuilder() {
+        bitField0_ |= 0x00000001;
+        onChanged();
+        return getUserInfoFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>required .hbase.pb.UserInformation user_info = 1;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformationOrBuilder getUserInfoOrBuilder() {
+        if (userInfoBuilder_ != null) {
+          return userInfoBuilder_.getMessageOrBuilder();
+        } else {
+          return userInfo_ == null ?
+              org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation.getDefaultInstance() : userInfo_;
+        }
+      }
+      /**
+       * <code>required .hbase.pb.UserInformation user_info = 1;</code>
+       */
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation, org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformationOrBuilder> 
+          getUserInfoFieldBuilder() {
+        if (userInfoBuilder_ == null) {
+          userInfoBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+              org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation, org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformationOrBuilder>(
+                  getUserInfo(),
+                  getParentForChildren(),
+                  isClean());
+          userInfo_ = null;
+        }
+        return userInfoBuilder_;
+      }
+
+      private org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription snapshot_ = null;
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescriptionOrBuilder> snapshotBuilder_;
+      /**
+       * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
+       */
+      public boolean hasSnapshot() {
+        return ((bitField0_ & 0x00000002) == 0x00000002);
+      }
+      /**
+       * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription getSnapshot() {
+        if (snapshotBuilder_ == null) {
+          return snapshot_ == null ? org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.getDefaultInstance() : snapshot_;
+        } else {
+          return snapshotBuilder_.getMessage();
+        }
+      }
+      /**
+       * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
+       */
+      public Builder setSnapshot(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription value) {
+        if (snapshotBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          snapshot_ = value;
+          onChanged();
+        } else {
+          snapshotBuilder_.setMessage(value);
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
+       */
+      public Builder setSnapshot(
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.Builder builderForValue) {
+        if (snapshotBuilder_ == null) {
+          snapshot_ = builderForValue.build();
+          onChanged();
+        } else {
+          snapshotBuilder_.setMessage(builderForValue.build());
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
+       */
+      public Builder mergeSnapshot(org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription value) {
+        if (snapshotBuilder_ == null) {
+          if (((bitField0_ & 0x00000002) == 0x00000002) &&
+              snapshot_ != null &&
+              snapshot_ != org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.getDefaultInstance()) {
+            snapshot_ =
+              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.newBuilder(snapshot_).mergeFrom(value).buildPartial();
+          } else {
+            snapshot_ = value;
+          }
+          onChanged();
+        } else {
+          snapshotBuilder_.mergeFrom(value);
+        }
+        bitField0_ |= 0x00000002;
+        return this;
+      }
+      /**
+       * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
+       */
+      public Builder clearSnapshot() {
+        if (snapshotBuilder_ == null) {
+          snapshot_ = null;
+          onChanged();
+        } else {
+          snapshotBuilder_.clear();
+        }
+        bitField0_ = (bitField0_ & ~0x00000002);
+        return this;
+      }
+      /**
+       * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.Builder getSnapshotBuilder() {
+        bitField0_ |= 0x00000002;
+        onChanged();
+        return getSnapshotFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
+       */
+      public org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescriptionOrBuilder getSnapshotOrBuilder() {
+        if (snapshotBuilder_ != null) {
+          return snapshotBuilder_.getMessageOrBuilder();
+        } else {
+          return snapshot_ == null ?
+              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.getDefaultInstance() : snapshot_;
+        }
+      }
+      /**
+       * <code>required .hbase.pb.SnapshotDescription snapshot = 2;</code>
+       */
+      private org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+          org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescriptionOrBuilder> 
+          getSnapshotFieldBuilder() {
+        if (snapshotBuilder_ == null) {
+          snapshotBuilder_ = new org.apache.hadoop.hbase.shaded.com.google.protobuf.SingleFieldBuilderV3<
+              org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription.Builder, org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescriptionOrBuilder>(
+                  getSnapshot(),
+                  getParentForChildren(),
+                  isClean());
+          snapshot_ = null;
+        }
+        return snapshotBuilder_;
+      }
+      public final Builder setUnknownFields(
+          final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      public final Builder mergeUnknownFields(
+          final org.apache.hadoop.hbase.shaded.com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:hbase.pb.TakeSnapshotStateData)
+    }
+
+    // @@protoc_insertion_point(class_scope:hbase.pb.TakeSnapshotStateData)
+    private static final org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData();
+    }
+
+    public static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    @java.lang.Deprecated public static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<TakeSnapshotStateData>
+        PARSER = new org.apache.hadoop.hbase.shaded.com.google.protobuf.AbstractParser<TakeSnapshotStateData>() {
+      public TakeSnapshotStateData parsePartialFrom(
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.CodedInputStream input,
+          org.apache.hadoop.hbase.shaded.com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws org.apache.hadoop.hbase.shaded.com.google.protobuf.InvalidProtocolBufferException {
+          return new TakeSnapshotStateData(input, extensionRegistry);
+      }
+    };
+
+    public static org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<TakeSnapshotStateData> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public org.apache.hadoop.hbase.shaded.com.google.protobuf.Parser<TakeSnapshotStateData> getParserForType() {
+      return PARSER;
+    }
+
+    public org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.TakeSnapshotStateData getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
   public interface DispatchMergingRegionsStateDataOrBuilder extends
       // @@protoc_insertion_point(interface_extends:hbase.pb.DispatchMergingRegionsStateData)
       org.apache.hadoop.hbase.shaded.com.google.protobuf.MessageOrBuilder {
@@ -27175,6 +28061,11 @@ public final class MasterProcedureProtos {
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_hbase_pb_RestoreSnapshotStateData_fieldAccessorTable;
   private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
+    internal_static_hbase_pb_TakeSnapshotStateData_descriptor;
+  private static final 
+    org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_hbase_pb_TakeSnapshotStateData_fieldAccessorTable;
+  private static final org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.Descriptor
     internal_static_hbase_pb_DispatchMergingRegionsStateData_descriptor;
   private static final 
     org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
@@ -27287,148 +28178,152 @@ public final class MasterProcedureProtos {
       "o\0221\n\023region_info_for_add\030\006 \003(\0132\024.hbase.p" +
       "b.RegionInfo\022T\n!parent_to_child_regions_" +
       "pair_list\030\007 \003(\0132).hbase.pb.RestoreParent" +
-      "ToChildRegionsPair\"\265\001\n\037DispatchMergingRe" +
+      "ToChildRegionsPair\"v\n\025TakeSnapshotStateD" +
+      "ata\022,\n\tuser_info\030\001 \002(\0132\031.hbase.pb.UserIn" +
+      "formation\022/\n\010snapshot\030\002 \002(\0132\035.hbase.pb.S" +
+      "napshotDescription\"\265\001\n\037DispatchMergingRe" +
       "gionsStateData\022,\n\tuser_info\030\001 \002(\0132\031.hbas" +
-      "e.pb.UserInformation\022\'\n\ntable_name\030\002 \002(\013" +
+      "e.pb.UserInformation\022\'\n\ntable_name\030\002 \002(\013",
       "2\023.hbase.pb.TableName\022)\n\013region_info\030\003 \003" +
       "(\0132\024.hbase.pb.RegionInfo\022\020\n\010forcible\030\004 \001" +
-      "(\010\"\254\001\n\031SplitTableRegionStateData\022,\n\tuser",
+      "(\010\"\254\001\n\031SplitTableRegionStateData\022,\n\tuser" +
       "_info\030\001 \002(\0132\031.hbase.pb.UserInformation\0220" +
       "\n\022parent_region_info\030\002 \002(\0132\024.hbase.pb.Re" +
       "gionInfo\022/\n\021child_region_info\030\003 \003(\0132\024.hb" +
       "ase.pb.RegionInfo\"\201\002\n\024ServerCrashStateDa" +
       "ta\022)\n\013server_name\030\001 \002(\0132\024.hbase.pb.Serve" +
       "rName\022\036\n\026distributed_log_replay\030\002 \001(\010\0227\n" +
-      "\031regions_on_crashed_server\030\003 \003(\0132\024.hbase" +
+      "\031regions_on_crashed_server\030\003 \003(\0132\024.hbase",
       ".pb.RegionInfo\022.\n\020regions_assigned\030\004 \003(\013" +
       "2\024.hbase.pb.RegionInfo\022\025\n\rcarrying_meta\030" +
-      "\005 \001(\010\022\036\n\020should_split_wal\030\006 \001(\010:\004true\"\311\001",
+      "\005 \001(\010\022\036\n\020should_split_wal\030\006 \001(\010:\004true\"\311\001" +
       "\n\025AssignRegionStateData\0229\n\020transition_st" +
       "ate\030\001 \002(\0162\037.hbase.pb.RegionTransitionSta" +
       "te\022)\n\013region_info\030\002 \002(\0132\024.hbase.pb.Regio" +
       "nInfo\022\035\n\016force_new_plan\030\003 \001(\010:\005false\022+\n\r" +
       "target_server\030\004 \001(\0132\024.hbase.pb.ServerNam" +
       "e\"\307\001\n\027UnassignRegionStateData\0229\n\020transit" +
-      "ion_state\030\001 \002(\0162\037.hbase.pb.RegionTransit" +
+      "ion_state\030\001 \002(\0162\037.hbase.pb.RegionTransit",
       "ionState\022)\n\013region_info\030\002 \002(\0132\024.hbase.pb" +
       ".RegionInfo\0220\n\022destination_server\030\003 \001(\0132" +
-      "\024.hbase.pb.ServerName\022\024\n\005force\030\004 \001(\010:\005fa",
+      "\024.hbase.pb.ServerName\022\024\n\005force\030\004 \001(\010:\005fa" +
       "lse\"\237\001\n\023MoveRegionStateData\022)\n\013region_in" +
       "fo\030\001 \002(\0132\024.hbase.pb.RegionInfo\022+\n\rsource" +
       "_server\030\002 \002(\0132\024.hbase.pb.ServerName\0220\n\022d" +
       "estination_server\030\003 \002(\0132\024.hbase.pb.Serve" +
       "rName*\330\001\n\020CreateTableState\022\036\n\032CREATE_TAB" +
       "LE_PRE_OPERATION\020\001\022 \n\034CREATE_TABLE_WRITE" +
-      "_FS_LAYOUT\020\002\022\034\n\030CREATE_TABLE_ADD_TO_META" +
+      "_FS_LAYOUT\020\002\022\034\n\030CREATE_TABLE_ADD_TO_META",
       "\020\003\022\037\n\033CREATE_TABLE_ASSIGN_REGIONS\020\004\022\"\n\036C" +
       "REATE_TABLE_UPDATE_DESC_CACHE\020\005\022\037\n\033CREAT" +
-      "E_TABLE_POST_OPERATION\020\006*\207\002\n\020ModifyTable",
+      "E_TABLE_POST_OPERATION\020\006*\207\002\n\020ModifyTable" +
       "State\022\030\n\024MODIFY_TABLE_PREPARE\020\001\022\036\n\032MODIF" +
       "Y_TABLE_PRE_OPERATION\020\002\022(\n$MODIFY_TABLE_" +
       "UPDATE_TABLE_DESCRIPTOR\020\003\022&\n\"MODIFY_TABL" +
       "E_REMOVE_REPLICA_COLUMN\020\004\022!\n\035MODIFY_TABL" +
       "E_DELETE_FS_LAYOUT\020\005\022\037\n\033MODIFY_TABLE_POS" +
       "T_OPERATION\020\006\022#\n\037MODIFY_TABLE_REOPEN_ALL" +
-      "_REGIONS\020\007*\212\002\n\022TruncateTableState\022 \n\034TRU" +
+      "_REGIONS\020\007*\212\002\n\022TruncateTableState\022 \n\034TRU",
       "NCATE_TABLE_PRE_OPERATION\020\001\022#\n\037TRUNCATE_" +
       "TABLE_REMOVE_FROM_META\020\002\022\"\n\036TRUNCATE_TAB" +
-      "LE_CLEAR_FS_LAYOUT\020\003\022#\n\037TRUNCATE_TABLE_C",
+      "LE_CLEAR_FS_LAYOUT\020\003\022#\n\037TRUNCATE_TABLE_C" +
       "REATE_FS_LAYOUT\020\004\022\036\n\032TRUNCATE_TABLE_ADD_" +
       "TO_META\020\005\022!\n\035TRUNCATE_TABLE_ASSIGN_REGIO" +
       "NS\020\006\022!\n\035TRUNCATE_TABLE_POST_OPERATION\020\007*" +
       "\337\001\n\020DeleteTableState\022\036\n\032DELETE_TABLE_PRE" +
       "_OPERATION\020\001\022!\n\035DELETE_TABLE_REMOVE_FROM" +
       "_META\020\002\022 \n\034DELETE_TABLE_CLEAR_FS_LAYOUT\020" +
-      "\003\022\"\n\036DELETE_TABLE_UPDATE_DESC_CACHE\020\004\022!\n" +
+      "\003\022\"\n\036DELETE_TABLE_UPDATE_DESC_CACHE\020\004\022!\n",
       "\035DELETE_TABLE_UNASSIGN_REGIONS\020\005\022\037\n\033DELE" +
       "TE_TABLE_POST_OPERATION\020\006*\320\001\n\024CreateName" +
-      "spaceState\022\034\n\030CREATE_NAMESPACE_PREPARE\020\001",
+      "spaceState\022\034\n\030CREATE_NAMESPACE_PREPARE\020\001" +
       "\022%\n!CREATE_NAMESPACE_CREATE_DIRECTORY\020\002\022" +
       ")\n%CREATE_NAMESPACE_INSERT_INTO_NS_TABLE" +
       "\020\003\022\036\n\032CREATE_NAMESPACE_UPDATE_ZK\020\004\022(\n$CR" +
       "EATE_NAMESPACE_SET_NAMESPACE_QUOTA\020\005*z\n\024" +
       "ModifyNamespaceState\022\034\n\030MODIFY_NAMESPACE" +
       "_PREPARE\020\001\022$\n MODIFY_NAMESPACE_UPDATE_NS" +
-      "_TABLE\020\002\022\036\n\032MODIFY_NAMESPACE_UPDATE_ZK\020\003" +
+      "_TABLE\020\002\022\036\n\032MODIFY_NAMESPACE_UPDATE_ZK\020\003",
       "*\332\001\n\024DeleteNamespaceState\022\034\n\030DELETE_NAME" +
       "SPACE_PREPARE\020\001\022)\n%DELETE_NAMESPACE_DELE" +
-      "TE_FROM_NS_TABLE\020\002\022#\n\037DELETE_NAMESPACE_R",
+      "TE_FROM_NS_TABLE\020\002\022#\n\037DELETE_NAMESPACE_R" +
       "EMOVE_FROM_ZK\020\003\022\'\n#DELETE_NAMESPACE_DELE" +
       "TE_DIRECTORIES\020\004\022+\n\'DELETE_NAMESPACE_REM" +
       "OVE_NAMESPACE_QUOTA\020\005*\331\001\n\024AddColumnFamil" +
       "yState\022\035\n\031ADD_COLUMN_FAMILY_PREPARE\020\001\022#\n" +
       "\037ADD_COLUMN_FAMILY_PRE_OPERATION\020\002\022-\n)AD" +
       "D_COLUMN_FAMILY_UPDATE_TABLE_DESCRIPTOR\020" +
-      "\003\022$\n ADD_COLUMN_FAMILY_POST_OPERATION\020\004\022" +
+      "\003\022$\n ADD_COLUMN_FAMILY_POST_OPERATION\020\004\022",
       "(\n$ADD_COLUMN_FAMILY_REOPEN_ALL_REGIONS\020" +
       "\005*\353\001\n\027ModifyColumnFamilyState\022 \n\034MODIFY_" +
-      "COLUMN_FAMILY_PREPARE\020\001\022&\n\"MODIFY_COLUMN",
+      "COLUMN_FAMILY_PREPARE\020\001\022&\n\"MODIFY_COLUMN" +
       "_FAMILY_PRE_OPERATION\020\002\0220\n,MODIFY_COLUMN" +
       "_FAMILY_UPDATE_TABLE_DESCRIPTOR\020\003\022\'\n#MOD" +
       "IFY_COLUMN_FAMILY_POST_OPERATION\020\004\022+\n\'MO" +
       "DIFY_COLUMN_FAMILY_REOPEN_ALL_REGIONS\020\005*" +
       "\226\002\n\027DeleteColumnFamilyState\022 \n\034DELETE_CO" +
       "LUMN_FAMILY_PREPARE\020\001\022&\n\"DELETE_COLUMN_F" +
-      "AMILY_PRE_OPERATION\020\002\0220\n,DELETE_COLUMN_F" +
+      "AMILY_PRE_OPERATION\020\002\0220\n,DELETE_COLUMN_F",
       "AMILY_UPDATE_TABLE_DESCRIPTOR\020\003\022)\n%DELET" +
       "E_COLUMN_FAMILY_DELETE_FS_LAYOUT\020\004\022\'\n#DE" +
-      "LETE_COLUMN_FAMILY_POST_OPERATION\020\005\022+\n\'D",
+      "LETE_COLUMN_FAMILY_POST_OPERATION\020\005\022+\n\'D" +
       "ELETE_COLUMN_FAMILY_REOPEN_ALL_REGIONS\020\006" +
       "*\350\001\n\020EnableTableState\022\030\n\024ENABLE_TABLE_PR" +
       "EPARE\020\001\022\036\n\032ENABLE_TABLE_PRE_OPERATION\020\002\022" +
       ")\n%ENABLE_TABLE_SET_ENABLING_TABLE_STATE" +
       "\020\003\022$\n ENABLE_TABLE_MARK_REGIONS_ONLINE\020\004" +
       "\022(\n$ENABLE_TABLE_SET_ENABLED_TABLE_STATE" +
-      "\020\005\022\037\n\033ENABLE_TABLE_POST_OPERATION\020\006*\362\001\n\021" +
+      "\020\005\022\037\n\033ENABLE_TABLE_POST_OPERATION\020\006*\362\001\n\021",
       "DisableTableState\022\031\n\025DISABLE_TABLE_PREPA" +
       "RE\020\001\022\037\n\033DISABLE_TABLE_PRE_OPERATION\020\002\022+\n" +
-      "\'DISABLE_TABLE_SET_DISABLING_TABLE_STATE",
+      "\'DISABLE_TABLE_SET_DISABLING_TABLE_STATE" +
       "\020\003\022&\n\"DISABLE_TABLE_MARK_REGIONS_OFFLINE" +
       "\020\004\022*\n&DISABLE_TABLE_SET_DISABLED_TABLE_S" +
       "TATE\020\005\022 \n\034DISABLE_TABLE_POST_OPERATION\020\006" +
       "*\346\001\n\022CloneSnapshotState\022 \n\034CLONE_SNAPSHO" +
       "T_PRE_OPERATION\020\001\022\"\n\036CLONE_SNAPSHOT_WRIT" +
       "E_FS_LAYOUT\020\002\022\036\n\032CLONE_SNAPSHOT_ADD_TO_M" +
-      "ETA\020\003\022!\n\035CLONE_SNAPSHOT_ASSIGN_REGIONS\020\004" +
+      "ETA\020\003\022!\n\035CLONE_SNAPSHOT_ASSIGN_REGIONS\020\004",
       "\022$\n CLONE_SNAPSHOT_UPDATE_DESC_CACHE\020\005\022!" +
       "\n\035CLONE_SNAPSHOT_POST_OPERATION\020\006*\260\001\n\024Re" +
-      "storeSnapshotState\022\"\n\036RESTORE_SNAPSHOT_P",
+      "storeSnapshotState\022\"\n\036RESTORE_SNAPSHOT_P" +
       "RE_OPERATION\020\001\022,\n(RESTORE_SNAPSHOT_UPDAT" +
       "E_TABLE_DESCRIPTOR\020\002\022$\n RESTORE_SNAPSHOT" +
       "_WRITE_FS_LAYOUT\020\003\022 \n\034RESTORE_SNAPSHOT_U" +
-      "PDATE_META\020\004*\376\001\n\033DispatchMergingRegionsS" +
-      "tate\022$\n DISPATCH_MERGING_REGIONS_PREPARE" +
-      "\020\001\022*\n&DISPATCH_MERGING_REGIONS_PRE_OPERA" +
-      "TION\020\002\0223\n/DISPATCH_MERGING_REGIONS_MOVE_" +
-      "REGION_TO_SAME_RS\020\003\022+\n\'DISPATCH_MERGING_" +
-      "REGIONS_DO_MERGE_IN_RS\020\004\022+\n\'DISPATCH_MER" +
-      "GING_REGIONS_POST_OPERATION\020\005*\305\003\n\025SplitT",
-      "ableRegionState\022\036\n\032SPLIT_TABLE_REGION_PR" +
-      "EPARE\020\001\022$\n SPLIT_TABLE_REGION_PRE_OPERAT" +
-      "ION\020\002\0220\n,SPLIT_TABLE_REGION_SET_SPLITTIN" +
-      "G_TABLE_STATE\020\003\022+\n\'SPLIT_TABLE_REGION_CL" +
-      "OSED_PARENT_REGION\020\004\022.\n*SPLIT_TABLE_REGI" +
-      "ON_CREATE_DAUGHTER_REGIONS\020\005\0220\n,SPLIT_TA" +
-      "BLE_REGION_PRE_OPERATION_BEFORE_PONR\020\006\022\"" +
-      "\n\036SPLIT_TABLE_REGION_UPDATE_META\020\007\022/\n+SP" +
-      "LIT_TABLE_REGION_PRE_OPERATION_AFTER_PON" +
-      "R\020\010\022)\n%SPLIT_TABLE_REGION_OPEN_CHILD_REG",
-      "IONS\020\t\022%\n!SPLIT_TABLE_REGION_POST_OPERAT" +
-      "ION\020\n*\234\002\n\020ServerCrashState\022\026\n\022SERVER_CRA" +
-      "SH_START\020\001\022\035\n\031SERVER_CRASH_PROCESS_META\020" +
-      "\002\022\034\n\030SERVER_CRASH_GET_REGIONS\020\003\022\036\n\032SERVE" +
-      "R_CRASH_NO_SPLIT_LOGS\020\004\022\033\n\027SERVER_CRASH_" +
-      "SPLIT_LOGS\020\005\022#\n\037SERVER_CRASH_PREPARE_LOG" +
-      "_REPLAY\020\006\022\027\n\023SERVER_CRASH_ASSIGN\020\010\022\037\n\033SE" +
-      "RVER_CRASH_WAIT_ON_ASSIGN\020\t\022\027\n\023SERVER_CR" +
-      "ASH_FINISH\020d*r\n\025RegionTransitionState\022\033\n" +
-      "\027REGION_TRANSITION_QUEUE\020\001\022\036\n\032REGION_TRA",
-      "NSITION_DISPATCH\020\002\022\034\n\030REGION_TRANSITION_" +
-      "FINISH\020\003*C\n\017MoveRegionState\022\030\n\024MOVE_REGI" +
-      "ON_UNASSIGN\020\001\022\026\n\022MOVE_REGION_ASSIGN\020\002BR\n" +
-      "1org.apache.hadoop.hbase.shaded.protobuf" +
-      ".generatedB\025MasterProcedureProtosH\001\210\001\001\240\001" +
-      "\001"
+      "PDATE_META\020\004*4\n\021TakeSnapshotState\022\037\n\033TAK" +
+      "E_SNAPSHOT_PRE_OPERATION\020\001*\376\001\n\033DispatchM" +
+      "ergingRegionsState\022$\n DISPATCH_MERGING_R" +
+      "EGIONS_PREPARE\020\001\022*\n&DISPATCH_MERGING_REG",
+      "IONS_PRE_OPERATION\020\002\0223\n/DISPATCH_MERGING" +
+      "_REGIONS_MOVE_REGION_TO_SAME_RS\020\003\022+\n\'DIS" +
+      "PATCH_MERGING_REGIONS_DO_MERGE_IN_RS\020\004\022+" +
+      "\n\'DISPATCH_MERGING_REGIONS_POST_OPERATIO" +
+      "N\020\005*\305\003\n\025SplitTableRegionState\022\036\n\032SPLIT_T" +
+      "ABLE_REGION_PREPARE\020\001\022$\n SPLIT_TABLE_REG" +
+      "ION_PRE_OPERATION\020\002\0220\n,SPLIT_TABLE_REGIO" +
+      "N_SET_SPLITTING_TABLE_STATE\020\003\022+\n\'SPLIT_T" +
+      "ABLE_REGION_CLOSED_PARENT_REGION\020\004\022.\n*SP" +
+      "LIT_TABLE_REGION_CREATE_DAUGHTER_REGIONS",
+      "\020\005\0220\n,SPLIT_TABLE_REGION_PRE_OPERATION_B" +
+      "EFORE_PONR\020\006\022\"\n\036SPLIT_TABLE_REGION_UPDAT" +
+      "E_META\020\007\022/\n+SPLIT_TABLE_REGION_PRE_OPERA" +
+      "TION_AFTER_PONR\020\010\022)\n%SPLIT_TABLE_REGION_" +
+      "OPEN_CHILD_REGIONS\020\t\022%\n!SPLIT_TABLE_REGI" +
+      "ON_POST_OPERATION\020\n*\234\002\n\020ServerCrashState" +
+      "\022\026\n\022SERVER_CRASH_START\020\001\022\035\n\031SERVER_CRASH" +
+      "_PROCESS_META\020\002\022\034\n\030SERVER_CRASH_GET_REGI" +
+      "ONS\020\003\022\036\n\032SERVER_CRASH_NO_SPLIT_LOGS\020\004\022\033\n" +
+      "\027SERVER_CRASH_SPLIT_LOGS\020\005\022#\n\037SERVER_CRA",
+      "SH_PREPARE_LOG_REPLAY\020\006\022\027\n\023SERVER_CRASH_" +
+      "ASSIGN\020\010\022\037\n\033SERVER_CRASH_WAIT_ON_ASSIGN\020" +
+      "\t\022\027\n\023SERVER_CRASH_FINISH\020d*r\n\025RegionTran" +
+      "sitionState\022\033\n\027REGION_TRANSITION_QUEUE\020\001" +
+      "\022\036\n\032REGION_TRANSITION_DISPATCH\020\002\022\034\n\030REGI" +
+      "ON_TRANSITION_FINISH\020\003*C\n\017MoveRegionStat" +
+      "e\022\030\n\024MOVE_REGION_UNASSIGN\020\001\022\026\n\022MOVE_REGI" +
+      "ON_ASSIGN\020\002BR\n1org.apache.hadoop.hbase.s" +
+      "haded.protobuf.generatedB\025MasterProcedur" +
+      "eProtosH\001\210\001\001\240\001\001"
     };
     org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =
         new org.apache.hadoop.hbase.shaded.com.google.protobuf.Descriptors.FileDescriptor.    InternalDescriptorAssigner() {
@@ -27534,38 +28429,44 @@ public final class MasterProcedureProtos {
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_RestoreSnapshotStateData_descriptor,
         new java.lang.String[] { "UserInfo", "Snapshot", "ModifiedTableSchema", "RegionInfoForRestore", "RegionInfoForRemove", "RegionInfoForAdd", "ParentToChildRegionsPairList", });
-    internal_static_hbase_pb_DispatchMergingRegionsStateData_descriptor =
+    internal_static_hbase_pb_TakeSnapshotStateData_descriptor =
       getDescriptor().getMessageTypes().get(15);
+    internal_static_hbase_pb_TakeSnapshotStateData_fieldAccessorTable = new
+      org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_hbase_pb_TakeSnapshotStateData_descriptor,
+        new java.lang.String[] { "UserInfo", "Snapshot", });
+    internal_static_hbase_pb_DispatchMergingRegionsStateData_descriptor =
+      getDescriptor().getMessageTypes().get(16);
     internal_static_hbase_pb_DispatchMergingRegionsStateData_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_DispatchMergingRegionsStateData_descriptor,
         new java.lang.String[] { "UserInfo", "TableName", "RegionInfo", "Forcible", });
     internal_static_hbase_pb_SplitTableRegionStateData_descriptor =
-      getDescriptor().getMessageTypes().get(16);
+      getDescriptor().getMessageTypes().get(17);
     internal_static_hbase_pb_SplitTableRegionStateData_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_SplitTableRegionStateData_descriptor,
         new java.lang.String[] { "UserInfo", "ParentRegionInfo", "ChildRegionInfo", });
     internal_static_hbase_pb_ServerCrashStateData_descriptor =
-      getDescriptor().getMessageTypes().get(17);
+      getDescriptor().getMessageTypes().get(18);
     internal_static_hbase_pb_ServerCrashStateData_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_ServerCrashStateData_descriptor,
         new java.lang.String[] { "ServerName", "DistributedLogReplay", "RegionsOnCrashedServer", "RegionsAssigned", "CarryingMeta", "ShouldSplitWal", });
     internal_static_hbase_pb_AssignRegionStateData_descriptor =
-      getDescriptor().getMessageTypes().get(18);
+      getDescriptor().getMessageTypes().get(19);
     internal_static_hbase_pb_AssignRegionStateData_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_AssignRegionStateData_descriptor,
         new java.lang.String[] { "TransitionState", "RegionInfo", "ForceNewPlan", "TargetServer", });
     internal_static_hbase_pb_UnassignRegionStateData_descriptor =
-      getDescriptor().getMessageTypes().get(19);
+      getDescriptor().getMessageTypes().get(20);
     internal_static_hbase_pb_UnassignRegionStateData_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_UnassignRegionStateData_descriptor,
         new java.lang.String[] { "TransitionState", "RegionInfo", "DestinationServer", "Force", });
     internal_static_hbase_pb_MoveRegionStateData_descriptor =
-      getDescriptor().getMessageTypes().get(20);
+      getDescriptor().getMessageTypes().get(21);
     internal_static_hbase_pb_MoveRegionStateData_fieldAccessorTable = new
       org.apache.hadoop.hbase.shaded.com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_hbase_pb_MoveRegionStateData_descriptor,

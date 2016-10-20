@@ -262,6 +262,15 @@ message RestoreSnapshotStateData {
   repeated RestoreParentToChildRegionsPair parent_to_child_regions_pair_list = 7;
 }
 
+enum TakeSnapshotState {
+  TAKE_SNAPSHOT_PRE_OPERATION = 1;
+}
+
+message TakeSnapshotStateData {
+  required UserInformation user_info = 1;
+  required SnapshotDescription snapshot = 2;
+}
+
 enum DispatchMergingRegionsState {
   DISPATCH_MERGING_REGIONS_PREPARE = 1;
   DISPATCH_MERGING_REGIONS_PRE_OPERATION = 2;

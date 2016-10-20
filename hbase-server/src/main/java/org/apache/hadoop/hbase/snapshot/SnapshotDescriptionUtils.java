@@ -116,7 +116,7 @@ public final class SnapshotDescriptionUtils {
   public static final String MASTER_SNAPSHOT_TIMEOUT_MILLIS = "hbase.snapshot.master.timeout.millis";
 
   /** By default, wait 300 seconds for a snapshot to complete */
-  public static final long DEFAULT_MAX_WAIT_TIME = 60000 * 5 ;
+  public static final int DEFAULT_MAX_WAIT_TIME = 60000 * 5 ;
 
 
   /**

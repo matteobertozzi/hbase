@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.master.snapshot.DisabledTableSnapshotHandler;
+import org.apache.hadoop.hbase.master.SnapshotSentinel;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotHFileCleaner;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.SnapshotDescription;
@@ -178,8 +178,8 @@ public class TestSnapshotFromMaster {
       UnknownSnapshotException.class);
 
     // set a mock handler to simulate a snapshot
-    DisabledTableSnapshotHandler mockHandler = Mockito.mock(DisabledTableSnapshotHandler.class);
-    Mockito.when(mockHandler.getException()).thenReturn(null);
+    SnapshotSentinel mockHandler = Mockito.mock(SnapshotSentinel.class);
+    Mockito.when(mockHandler.getExceptionIfFailed()).thenReturn(null);
     Mockito.when(mockHandler.getSnapshot()).thenReturn(desc);
     Mockito.when(mockHandler.isFinished()).thenReturn(new Boolean(true));
     Mockito.when(mockHandler.getCompletionTimestamp())
