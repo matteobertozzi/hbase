@@ -72,6 +72,10 @@ public class WALProcedureStore extends ProcedureStoreBase {
     void recoverFileLease(FileSystem fs, Path path) throws IOException;
   }
 
+  public static final String WAL_COUNT_WARN_THRESHOLD_CONF_KEY =
+    "hbase.procedure.store.wal.warn.threshold";
+  private static final int DEFAULT_WAL_COUNT_WARN_THRESHOLD = 64;
+
   public static final String MAX_RETRIES_BEFORE_ROLL_CONF_KEY =
     "hbase.procedure.store.wal.max.retries.before.roll";
   private static final int DEFAULT_MAX_RETRIES_BEFORE_ROLL = 3;
@@ -106,6 +110,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
   private static final int DEFAULT_SYNC_STATS_COUNT = 10;
 
   private final LinkedList<ProcedureWALFile> logs = new LinkedList<>();
+  private final ProcedureStoreTracker holdingCleanupTracker = new ProcedureStoreTracker();
   private final ProcedureStoreTracker storeTracker = new ProcedureStoreTracker();
   private final ReentrantLock lock = new ReentrantLock();
   private final Condition waitCond = lock.newCondition();
@@ -132,6 +137,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
   private Thread syncThread;
   private ByteSlot[] slots;
 
+  private int walCountWarnThreshold;
   private int maxRetriesBeforeRoll;
   private int maxSyncFailureRoll;
   private int waitBeforeRoll;
@@ -195,6 +201,8 @@ public class WALProcedureStore extends ProcedureStoreBase {
     }
 
     // Tunings
+    walCountWarnThreshold =
+      conf.getInt(WAL_COUNT_WARN_THRESHOLD_CONF_KEY, DEFAULT_WAL_COUNT_WARN_THRESHOLD);
     maxRetriesBeforeRoll =
       conf.getInt(MAX_RETRIES_BEFORE_ROLL_CONF_KEY, DEFAULT_MAX_RETRIES_BEFORE_ROLL);
     maxSyncFailureRoll = conf.getInt(MAX_SYNC_FAILURE_ROLL_CONF_KEY, DEFAULT_MAX_SYNC_FAILURE_ROLL);
@@ -379,6 +387,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
         }
       });
     } finally {
+      buildHoldingCleanupTracker();
       loading.set(false);
     }
   }
@@ -604,16 +613,20 @@ public class WALProcedureStore extends ProcedureStoreBase {
           storeTracker.insert(procId);
         } else {
           storeTracker.insert(procId, subProcIds);
+          holdingCleanupTracker.setDeletedIfSet(procId);
         }
         break;
       case UPDATE:
         storeTracker.update(procId);
+        holdingCleanupTracker.setDeletedIfSet(procId);
         break;
       case DELETE:
         if (subProcIds != null && subProcIds.length > 0) {
           storeTracker.delete(subProcIds);
+          holdingCleanupTracker.setDeletedIfSet(subProcIds);
         } else {
           storeTracker.delete(procId);
+          holdingCleanupTracker.setDeletedIfSet(procId);
         }
         break;
       default:
@@ -923,6 +936,15 @@ public class WALProcedureStore extends ProcedureStoreBase {
     lastRollTs.set(rollTs);
     logs.add(new ProcedureWALFile(fs, newLogFile, header, startPos, rollTs));
 
+    // if it's the first next WAL being added, build the holding cleanup tracker
+    if (logs.size() == 2) {
+      buildHoldingCleanupTracker();
+    } else if (logs.size() > walCountWarnThreshold) {
+      LOG.warn("procedure WALs count=" + logs.size() +
+        " above the warning threshold " + walCountWarnThreshold +
+        ". check running procedures to see if something is stuck.");
+    }
+
     if (LOG.isDebugEnabled()) {
       LOG.debug("Roll new state log: " + logId);
     }
@@ -951,38 +973,31 @@ public class WALProcedureStore extends ProcedureStoreBase {
   // ==========================================================================
   //  Log Files cleaner helpers
   // ==========================================================================
-
-  /**
-   * Iterates over log files from latest (ignoring currently active one) to oldest, deleting the
-   * ones which don't contain anything useful for recovery.
-   * @throws IOException
-   */
   private void removeInactiveLogs() throws IOException {
-    // TODO: can we somehow avoid first iteration (starting from newest log) and still figure out
-    // efficient way to cleanup old logs.
-    // Alternatively, a complex and maybe more efficient method would be using this iteration to
-    // rewrite latest states of active procedures to a new log file and delete all old ones.
-    if (logs.size() <= 1) return;
-    ProcedureStoreTracker runningTracker = new ProcedureStoreTracker();
-    runningTracker.resetTo(storeTracker);
-    List<ProcedureWALFile> logsToBeDeleted = new ArrayList<>();
-    for (int i = logs.size() - 2; i >= 0; i--) {
-      ProcedureWALFile log = logs.get(i);
-      // If nothing was subtracted, delete the log file since it doesn't contain any useful proc
-      // states.
-      if (!runningTracker.subtract(log.getTracker())) {
-        logsToBeDeleted.add(log);
-      }
+    // We keep track of which procedures are holding the oldest WAL in 'holdingCleanupTracker'.
+    // once there is nothing olding the oldest WAL we can remove it.
+    while (logs.size() > 1 && holdingCleanupTracker.isEmpty()) {
+      removeLogFile(logs.getFirst());
+      buildHoldingCleanupTracker();
     }
-    // Delete the logs from oldest to newest and stop at first log that can't be deleted to avoid
-    // holes in the log file sequence (for better debug capability).
-    while (true) {
-      ProcedureWALFile log = logs.getFirst();
-      if (logsToBeDeleted.contains(log)) {
-        removeLogFile(log);
-      } else {
-        break;
-      }
+
+    // TODO: In case we are holding up a lot of logs for long time we should
+    // rewrite old procedures (in theory parent procs) to the new WAL.
+  }
+
+  private void buildHoldingCleanupTracker() {
+    if (logs.size() <= 1) {
+      // we only have one wal, so nothing to do
+      holdingCleanupTracker.reset();
+      return;
+    }
+
+    // compute the holding tracker.
+    //  - the first WAL is used for the 'updates'
+    //  - the other WALs are scanned to remove procs already in other wals.
+    holdingCleanupTracker.resetTo(logs.getFirst().getTracker(), true);
+    for (int i = 1; i < logs.size(); ++i) {
+      holdingCleanupTracker.setDeletedIfSet(logs.get(i).getTracker());
     }
   }
 
@@ -995,12 +1010,19 @@ public class WALProcedureStore extends ProcedureStoreBase {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Remove all state logs with ID less than " + lastLogId);
     }
+
+    boolean removed = false;
     while (logs.size() > 1) {
       ProcedureWALFile log = logs.getFirst();
       if (lastLogId < log.getLogId()) {
         break;
       }
       removeLogFile(log);
+      removed = true;
+    }
+
+    if (removed) {
+      buildHoldingCleanupTracker();
     }
   }
 
