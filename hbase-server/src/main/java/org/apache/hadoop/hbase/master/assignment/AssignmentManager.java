@@ -579,6 +579,11 @@ public class AssignmentManager implements ServerListener {
     return new SplitTableRegionProcedure(getProcedureEnvironment(), regionToSplit, splitKey);
   }
 
+  public MergeTableRegionProcedure createMergeProcedure(final HRegionInfo regionToMergeA,
+      final HRegionInfo regionToMergeB) throws IOException {
+    return new MergeTableRegionProcedure(getProcedureEnvironment(), regionToMergeA, regionToMergeB);
+  }
+
   /**
    * Delete the region states. This is called by "DeleteTable"
    */
@@ -729,12 +734,25 @@ public class AssignmentManager implements ServerListener {
 
   private void updateRegionMergeTransition(final ServerName serverName, final TransitionCode state,
       final HRegionInfo merged, final HRegionInfo hriA, final HRegionInfo hriB)
-      throws PleaseHoldException, UnexpectedStateException {
+      throws PleaseHoldException, UnexpectedStateException, IOException {
     checkFailoverCleanupCompleted(merged);
 
-    // TODO: Attach merge support
-    throw new UnsupportedOperationException(String.format(
-      "Merge not handled yet: state=%s merged=%s hriA=%s hriB=%s", state, merged, hriA, hriB));
+    if (state != TransitionCode.READY_TO_SPLIT) {
+      throw new UnexpectedStateException("unsupported merge state=" + state +
+        " for regionA=" + hriA + " regionB=" + hriB + " merged=" + merged +
+        " maybe an old RS (< 2.0) had the operation in progress");
+    }
+
+    // TODO
+    LOG.debug("handling merge request from RS=" + merged + ", merged=" + merged);
+    master.getMasterProcedureExecutor().submitProcedure(
+        createMergeProcedure(hriA, hriB));
+
+    // If the RS is < 2.0 throw an exception to abort the operation, we are handling the merge
+    if (regionStateMap.getOrCreateServer(serverName).getVersionNumber() < 0x0200000) {
+      throw new UnsupportedOperationException(String.format(
+        "Merge not handled yet: state=%s merged=%s hriA=%s hriB=%s", state, merged, hriA, hriB));
+    }
   }
 
   // ============================================================================================

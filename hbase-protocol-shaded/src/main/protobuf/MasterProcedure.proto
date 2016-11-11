@@ -304,6 +304,18 @@ message SplitTableRegionStateData {
   repeated RegionInfo child_region_info = 3;
 }
 
+enum MergeTableRegionState {
+  MERGE_TABLE_REGION_PREPARE = 1;
+  MERGE_TABLE_REGION_PRE_OPERATION = 2;
+  MERGE_TABLE_REGION_POST_OPERATION = 9;
+}
+
+message MergeTableRegionStateData {
+  required UserInformation user_info = 1;
+  required RegionInfo merged_region_info = 2;
+  repeated RegionInfo region_info_to_merge = 3;
+}
+
 message ServerCrashStateData {
   required ServerName server_name = 1;
   optional bool distributed_log_replay = 2;
