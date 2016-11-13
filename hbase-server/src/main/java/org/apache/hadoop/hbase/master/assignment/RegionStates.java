@@ -69,19 +69,19 @@ public class RegionStates {
     State.CLOSING                 // already in-progress (retrying)
   };
 
-  private static class AssignmentProcedureEvent extends ProcedureEvent<HRegionInfo> {
+  private static final class AssignmentProcedureEvent extends ProcedureEvent<HRegionInfo> {
     public AssignmentProcedureEvent(final HRegionInfo regionInfo) {
       super(regionInfo);
     }
   }
 
-  private static class ServerReportEvent extends ProcedureEvent<ServerName> {
+  private static final class ServerReportEvent extends ProcedureEvent<ServerName> {
     public ServerReportEvent(final ServerName serverName) {
       super(serverName);
     }
   }
 
-  public static class RegionStateNode implements Comparable<RegionStateNode> {
+  public static final class RegionStateNode implements Comparable<RegionStateNode> {
     private final HRegionInfo regionInfo;
     private final ProcedureEvent event;
 
@@ -114,6 +114,10 @@ public class RegionStates {
         return inExpectedState;
       }
       return true;
+    }
+
+    public boolean isStuck() {
+      return isInState(State.FAILED_OPEN) && getProcedure() != null;
     }
 
     public boolean isInTransition() {
@@ -237,7 +241,7 @@ public class RegionStates {
   }
 
   public enum ServerState { ONLINE, SPLITTING, OFFLINE }
-  public static class ServerStateNode implements Comparable<ServerStateNode> {
+  public static final class ServerStateNode implements Comparable<ServerStateNode> {
     private final ServerReportEvent reportEvent;
 
     private final Set<RegionStateNode> regions;
@@ -345,6 +349,9 @@ public class RegionStates {
 
   private final ConcurrentSkipListMap<byte[], RegionStateNode> regionOffline =
     new ConcurrentSkipListMap<byte[], RegionStateNode>(Bytes.BYTES_COMPARATOR);
+
+  private final ConcurrentSkipListMap<byte[], RegionFailedOpen> regionFailedOpen =
+    new ConcurrentSkipListMap<byte[], RegionFailedOpen>(Bytes.BYTES_COMPARATOR);
 
   private final ConcurrentHashMap<ServerName, ServerStateNode> serverMap =
       new ConcurrentHashMap<ServerName, ServerStateNode>();
@@ -688,6 +695,63 @@ public class RegionStates {
 
   public void removeFromOfflineRegions(final HRegionInfo regionInfo) {
     regionOffline.remove(regionInfo.getRegionName());
+  }
+
+  // ==========================================================================
+  //  Region FAIL_OPEN helpers
+  // ==========================================================================
+  public static final class RegionFailedOpen {
+    private final RegionStateNode regionNode;
+
+    private volatile Exception exception = null;
+    private volatile int retries = 0;
+
+    public RegionFailedOpen(final RegionStateNode regionNode) {
+      this.regionNode = regionNode;
+    }
+
+    public HRegionInfo getRegionInfo() {
+      return regionNode.getRegionInfo();
+    }
+
+    public int incrementAndGetRetries() {
+      return ++this.retries;
+    }
+
+    public int getRetries() {
+      return retries;
+    }
+
+    public void setException(final Exception exception) {
+      this.exception = exception;
+    }
+
+    public Exception getException() {
+      return this.exception;
+    }
+  }
+
+  public RegionFailedOpen addToFailedOpen(final RegionStateNode regionNode) {
+    final byte[] key = regionNode.getRegionInfo().getRegionName();
+    RegionFailedOpen node = regionFailedOpen.get(key);
+    if (node != null) {
+      RegionFailedOpen newNode = new RegionFailedOpen(regionNode);
+      RegionFailedOpen oldNode = regionFailedOpen.putIfAbsent(key, newNode);
+      node = oldNode != null ? oldNode : newNode;
+    }
+    return node;
+  }
+
+  public RegionFailedOpen getFailedOpen(final HRegionInfo regionInfo) {
+    return regionFailedOpen.get(regionInfo.getRegionName());
+  }
+
+  public void removeFromFailedOpen(final HRegionInfo regionInfo) {
+    regionFailedOpen.remove(regionInfo.getRegionName());
+  }
+
+  public List<RegionState> getRegionFailedOpen() {
+    return Collections.emptyList();
   }
 
   // ==========================================================================

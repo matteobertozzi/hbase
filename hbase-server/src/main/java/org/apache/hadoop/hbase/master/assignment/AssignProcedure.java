@@ -253,7 +253,8 @@ public class AssignProcedure extends RegionTransitionProcedure {
 
   private boolean incrementAndCheckMaxAttempts(final MasterProcedureEnv env,
       final RegionStateNode regionNode) {
-    int retries = env.getAssignmentManager().incrementAndGetFailedOpen(regionNode.getRegionInfo());
+    final int retries = env.getAssignmentManager().getRegionStates()
+      .addToFailedOpen(regionNode).incrementAndGetRetries();
     LOG.info("RETRY " + retries + ": " + this);
     return retries >= env.getAssignmentManager().getAssignMaxAttempts();
   }

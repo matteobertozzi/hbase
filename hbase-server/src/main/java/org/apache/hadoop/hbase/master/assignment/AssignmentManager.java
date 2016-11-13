@@ -39,6 +39,7 @@ import java.util.Set;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.commons.collections.iterators.IteratorChain;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
@@ -1003,6 +1004,7 @@ public class AssignmentManager implements ServerListener {
 
   private void handleRegionOverStuckWarningThreshold(final HRegionInfo regionInfo) {
     final RegionStateNode regionNode = regionStateMap.getRegionNode(regionInfo);
+    //if (regionNode.isStuck()) {
     LOG.warn("TODO Handle region stuck in transition: " + regionNode);
   }
 
@@ -1084,12 +1086,12 @@ public class AssignmentManager implements ServerListener {
 
     st = System.currentTimeMillis();
     for (RegionStateNode regionNode: regionStateMap.getRegionNodes()) {
-      if (regionNode.getState() == State.OPEN) {
+      if (regionNode.isInState(State.OPEN)) {
         final ServerName serverName = regionNode.getRegionLocation();
         if (!master.getServerManager().isServerOnline(serverName)) {
           offlineServersWithOnlineRegions.add(serverName);
         }
-      } else if (regionNode.getState() == State.OFFLINE) {
+      } else if (regionNode.isInState(State.CLOSED, State.OFFLINE)) {
         if (isTableEnabled(regionNode.getTable())) {
           regionsToAssign.add(regionNode.getRegionInfo());
         }
@@ -1172,24 +1174,6 @@ public class AssignmentManager implements ServerListener {
   public int getNumRegionsOpened() {
     // TODO: Used by TestRegionPlacement.java and assume monotonically increasing value
     return 0;
-  }
-
-  // TODO: can this stuff be only in the AssignProcedure and available by getting only RIT?
-  private Map<HRegionInfo, AtomicInteger> failedTracker =
-    new java.util.concurrent.ConcurrentHashMap<HRegionInfo, AtomicInteger>();
-  public Map<HRegionInfo, AtomicInteger> getFailedOpenTracker() {
-    return failedTracker;
-  }
-
-  protected int incrementAndGetFailedOpen(final HRegionInfo regionInfo) {
-    Map<HRegionInfo, AtomicInteger> failedOpen = getFailedOpenTracker();
-    AtomicInteger count = failedOpen.get(regionInfo);
-    if (count == null) {
-      count = new AtomicInteger(1);
-      failedOpen.put(regionInfo, count);
-      return 1;
-    }
-    return count.incrementAndGet();
   }
 
   // ============================================================================================
