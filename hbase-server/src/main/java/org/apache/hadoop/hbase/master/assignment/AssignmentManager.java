@@ -667,8 +667,10 @@ public class AssignmentManager implements ServerListener {
         serverName, regionInfo, state));
     }
 
-    LOG.info(String.format("UPDATE REGION TRANSITION serverName=%s region=%s state=%s",
+    if (LOG.isTraceEnabled()) {
+      LOG.trace(String.format("update region transition serverName=%s region=%s state=%s",
         serverName, regionNode, state));
+    }
 
     final ServerStateNode serverNode = regionStateMap.getOrCreateServer(serverName);
     if (!reportTransition(regionNode, serverNode, state, seqId)) {
@@ -711,6 +713,7 @@ public class AssignmentManager implements ServerListener {
         " hriA=" + hriA + " hriB=" + hriB);
     }
 
+    // TODO: Should this be in preSplit?
     try {
       regionStateListener.onRegionSplit(parent);
     } catch (QuotaExceededException e) {
@@ -719,10 +722,12 @@ public class AssignmentManager implements ServerListener {
       throw e;
     }
 
-    // Submit split
+    // Submit the Split procedure
     final byte[] splitKey = hriB.getStartKey();
-    LOG.debug("handling split request from RS=" + serverName + ", parent=" + parent +
-      " splitKey=" + Bytes.toStringBinary(splitKey));
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("handling split request from RS=" + serverName +
+          ", parent=" + parent + " splitKey=" + Bytes.toStringBinary(splitKey));
+    }
     master.getMasterProcedureExecutor().submitProcedure(
         createSplitProcedure(parent, splitKey));
 
@@ -744,8 +749,10 @@ public class AssignmentManager implements ServerListener {
         " maybe an old RS (< 2.0) had the operation in progress");
     }
 
-    // TODO
-    LOG.debug("handling merge request from RS=" + merged + ", merged=" + merged);
+    // Submit the Merge procedure
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("handling merge request from RS=" + merged + ", merged=" + merged);
+    }
     master.getMasterProcedureExecutor().submitProcedure(
         createMergeProcedure(hriA, hriB));
 
@@ -770,10 +777,14 @@ public class AssignmentManager implements ServerListener {
       final int versionNumber, final Set<byte[]> regionNames) {
     if (!isRunning()) return;
 
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("report online regions server=" + serverName +
+          " region=" + RegionStates.regionNamesToString(regionNames) +
+          " isMetaLoaded=" + isMetaLoaded());
+    }
+
     final long startTime = EnvironmentEdgeManager.currentTime();
     final ServerStateNode serverNode = regionStateMap.getOrCreateServer(serverName);
-    LOG.warn("Report ONLINE REGIONS server=" + serverName + " region=" + regionNames.size() +
-      " isMetaLoaded=" + isMetaLoaded());
 
     // update the server version number. This will be used for live upgrades.
     synchronized (serverNode) {
@@ -816,10 +827,11 @@ public class AssignmentManager implements ServerListener {
         }
 
         final RegionStateNode regionNode = regionStateMap.getOrCreateRegionNode(hri);
-        LOG.info("META REPORTED: " + regionNode);
         if (!reportTransition(regionNode, serverNode, TransitionCode.OPENED, 0)) {
           LOG.warn("meta reported but no procedure found");
           regionNode.setRegionLocation(serverNode.getServerName());
+        } else if (LOG.isTraceEnabled()) {
+          LOG.trace("meta reported: " + regionNode);
         }
       }
     } catch (UnexpectedStateException e) {
@@ -1015,12 +1027,6 @@ public class AssignmentManager implements ServerListener {
     final long startTime = System.currentTimeMillis();
 
     LOG.info("Joining the cluster...");
-
-    /*
-    int poolSize = master.getConfiguration().getInt(BOOTSTRAP_THREAD_POOL_SIZE_CONF_KEY,
-        DEFAULT_BOOTSTRAP_THREAD_POOL_SIZE);
-    TaskPool taskPool = TaskPool(poolSize, 60, TimeUnit.SECONDS, "AssignmentManager-JoinCluster");
-    */
 
     // Scan hbase:meta to build list of existing regions, servers, and assignment
     loadMeta();

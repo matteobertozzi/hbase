@@ -28,6 +28,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
@@ -798,5 +799,23 @@ public class RegionStates {
     ServerStateNode serverNode = getOrCreateServer(serverName);
     serverNode.removeRegion(regionNode);
     return serverNode;
+  }
+
+  // ==========================================================================
+  //  ToString helpers
+  // ==========================================================================
+  public static String regionNamesToString(final Collection<byte[]> regions) {
+    final StringBuilder sb = new StringBuilder();
+    final Iterator<byte[]> it = regions.iterator();
+    sb.append("[");
+    if (it.hasNext()) {
+      sb.append(Bytes.toStringBinary(it.next()));
+      while (it.hasNext()) {
+        sb.append(", ");
+        sb.append(Bytes.toStringBinary(it.next()));
+      }
+    }
+    sb.append("]");
+    return sb.toString();
   }
 }
