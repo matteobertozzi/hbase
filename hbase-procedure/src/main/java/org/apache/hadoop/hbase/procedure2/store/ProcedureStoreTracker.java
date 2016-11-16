@@ -484,6 +484,22 @@ public class ProcedureStoreTracker {
     }
   }
 
+  public void insert(final long[] procIds) {
+    BitSetNode node = null;
+    for (int i = 0; i < procIds.length; ++i) {
+      node = insert(node, procIds[i]);
+    }
+  }
+
+  private BitSetNode insert(BitSetNode node, final long procId) {
+    if (node == null || !node.contains(procId)) {
+      node = getOrCreateNode(procId);
+    }
+    node.update(procId);
+    trackProcIds(procId);
+    return node;
+  }
+
   public void update(long procId) {
     Map.Entry<Long, BitSetNode> entry = map.floorEntry(procId);
     assert entry != null : "expected node to update procId=" + procId;

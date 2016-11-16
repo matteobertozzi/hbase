@@ -428,6 +428,34 @@ public class WALProcedureStore extends ProcedureStoreBase {
   }
 
   @Override
+  public void insert(final Procedure[] procs) {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Insert " + Arrays.toString(procs));
+    }
+
+    ByteSlot slot = acquireSlot();
+    try {
+      // Serialize the insert
+      long[] procIds = new long[procs.length];
+      for (int i = 0; i < procs.length; ++i) {
+        assert !procs[i].hasParent();
+        procIds[i] = procs[i].getProcId();
+        ProcedureWALFormat.writeInsert(slot, procs[i]);
+      }
+
+      // Push the transaction data and wait until it is persisted
+      pushData(PushType.INSERT, slot, Procedure.NO_PROC_ID, procIds);
+    } catch (IOException e) {
+      // We are not able to serialize the procedure.
+      // this is a code error, and we are not able to go on.
+      LOG.fatal("Unable to serialize one of the procedure: " + Arrays.toString(procs), e);
+      throw new RuntimeException(e);
+    } finally {
+      releaseSlot(slot);
+    }
+  }
+
+  @Override
   public void update(final Procedure proc) {
     if (LOG.isTraceEnabled()) {
       LOG.trace("Update " + proc);
@@ -523,7 +551,7 @@ public class WALProcedureStore extends ProcedureStoreBase {
       }
 
       // Push the transaction data and wait until it is persisted
-      pushData(PushType.DELETE, slot, -1, procIds);
+      pushData(PushType.DELETE, slot, Procedure.NO_PROC_ID, procIds);
     } catch (IOException e) {
       // We are not able to serialize the procedure.
       // this is a code error, and we are not able to go on.
@@ -612,6 +640,8 @@ public class WALProcedureStore extends ProcedureStoreBase {
       case INSERT:
         if (subProcIds == null) {
           storeTracker.insert(procId);
+        } else if (procId == Procedure.NO_PROC_ID) {
+          storeTracker.insert(subProcIds);
         } else {
           storeTracker.insert(procId, subProcIds);
         }
