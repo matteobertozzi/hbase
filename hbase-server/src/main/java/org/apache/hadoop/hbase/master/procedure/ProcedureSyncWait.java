@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.ProcedureInfo;
 import org.apache.hadoop.hbase.classification.InterfaceAudience;
 import org.apache.hadoop.hbase.classification.InterfaceStability;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
@@ -179,6 +180,9 @@ public final class ProcedureSyncWait {
       if (result != null && !result.equals(Boolean.FALSE)) {
         return result;
       }
+      if (!isMasterRunning(env.getMasterServices())) {
+        throw new IOException("Master is not running");
+      }
       try {
         Thread.sleep(waitingTimeForEvents);
       } catch (InterruptedException e) {
@@ -226,6 +230,11 @@ public final class ProcedureSyncWait {
         return env.getMasterServices().getMasterQuotaManager();
       }
     });
+  }
+
+  private static boolean isMasterRunning(final MasterServices master) {
+    return master.isActiveMaster() && !master.isStopped() &&
+      !master.isStopping() && !master.isAborted();
   }
 
   /*
