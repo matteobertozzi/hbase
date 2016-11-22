@@ -666,8 +666,10 @@ public class AssignmentManager implements ServerListener {
         serverName, regionInfo, state));
     }
 
-    LOG.info(String.format("UPDATE REGION TRANSITION serverName=%s region=%s state=%s",
+    if (LOG.isTraceEnabled()) {
+      LOG.trace(String.format("update region transition serverName=%s region=%s state=%s",
         serverName, regionNode, state));
+    }
 
     final ServerStateNode serverNode = regionStateMap.getOrCreateServer(serverName);
     if (!reportTransition(regionNode, serverNode, state, seqId)) {
@@ -752,10 +754,14 @@ public class AssignmentManager implements ServerListener {
       final int versionNumber, final Set<byte[]> regionNames) {
     if (!isRunning()) return;
 
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("report online regions server=" + serverName +
+          " region=" + RegionStates.regionNamesToString(regionNames) +
+          " isMetaLoaded=" + isMetaLoaded());
+    }
+
     final long startTime = EnvironmentEdgeManager.currentTime();
     final ServerStateNode serverNode = regionStateMap.getOrCreateServer(serverName);
-    LOG.warn("Report ONLINE REGIONS server=" + serverName + " region=" + regionNames.size() +
-      " isMetaLoaded=" + isMetaLoaded());
 
     // update the server version number. This will be used for live upgrades.
     synchronized (serverNode) {
@@ -795,10 +801,11 @@ public class AssignmentManager implements ServerListener {
         }
 
         final RegionStateNode regionNode = regionStateMap.getOrCreateRegionNode(hri);
-        LOG.info("META REPORTED: " + regionNode);
         if (!reportTransition(regionNode, serverNode, TransitionCode.OPENED, 0)) {
           LOG.warn("meta reported but no procedure found");
           regionNode.setRegionLocation(serverNode.getServerName());
+        } else if (LOG.isTraceEnabled()) {
+          LOG.trace("meta reported: " + regionNode);
         }
       }
     } catch (UnexpectedStateException e) {
@@ -994,12 +1001,6 @@ public class AssignmentManager implements ServerListener {
     final long startTime = System.currentTimeMillis();
 
     LOG.info("Joining the cluster...");
-
-    /*
-    int poolSize = master.getConfiguration().getInt(BOOTSTRAP_THREAD_POOL_SIZE_CONF_KEY,
-        DEFAULT_BOOTSTRAP_THREAD_POOL_SIZE);
-    TaskPool taskPool = TaskPool(poolSize, 60, TimeUnit.SECONDS, "AssignmentManager-JoinCluster");
-    */
 
     // Scan hbase:meta to build list of existing regions, servers, and assignment
     loadMeta();
