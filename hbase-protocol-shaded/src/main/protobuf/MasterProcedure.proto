@@ -277,27 +277,6 @@ message DispatchMergingRegionsStateData {
   optional bool forcible = 4;
 }
 
-enum MergeTableRegionsState {
-  MERGE_TABLE_REGIONS_PREPARE = 1;
-  MERGE_TABLE_REGIONS_MOVE_REGION_TO_SAME_RS = 2;
-  MERGE_TABLE_REGIONS_PRE_MERGE_OPERATION = 3;
-  MERGE_TABLE_REGIONS_SET_MERGING_TABLE_STATE = 4;
-  MERGE_TABLE_REGIONS_CLOSE_REGIONS = 5;
-  MERGE_TABLE_REGIONS_CREATE_MERGED_REGION = 6;
-  MERGE_TABLE_REGIONS_PRE_MERGE_COMMIT_OPERATION = 7;
-  MERGE_TABLE_REGIONS_UPDATE_META = 8;
-  MERGE_TABLE_REGIONS_POST_MERGE_COMMIT_OPERATION = 9;
-  MERGE_TABLE_REGIONS_OPEN_MERGED_REGION = 10;
-  MERGE_TABLE_REGIONS_POST_OPERATION = 11;
-}
-
-message MergeTableRegionsStateData {
-  required UserInformation user_info = 1;
-  repeated RegionInfo region_info = 2;
-  required RegionInfo merged_region_info = 3;
-  optional bool forcible = 4 [default = false];
-}
-
 enum SplitTableRegionState {
   SPLIT_TABLE_REGION_PREPARE = 1;
   SPLIT_TABLE_REGION_PRE_OPERATION = 2;
@@ -314,6 +293,28 @@ message SplitTableRegionStateData {
   required UserInformation user_info = 1;
   required RegionInfo parent_region_info = 2;
   repeated RegionInfo child_region_info = 3;
+}
+
+enum MergeTableRegionsState {
+  MERGE_TABLE_REGIONS_PREPARE = 1;
+  MERGE_TABLE_REGIONS_PRE_OPERATION = 2;
+  MERGE_TABLE_REGIONS_MOVE_REGION_TO_SAME_RS = 3;
+  MERGE_TABLE_REGIONS_PRE_MERGE_OPERATION = 4;
+  MERGE_TABLE_REGIONS_SET_MERGING_TABLE_STATE = 5;
+  MERGE_TABLE_REGIONS_CLOSE_REGIONS = 6;
+  MERGE_TABLE_REGIONS_CREATE_MERGED_REGION = 7;
+  MERGE_TABLE_REGIONS_PRE_MERGE_COMMIT_OPERATION = 8;
+  MERGE_TABLE_REGIONS_UPDATE_META = 9;
+  MERGE_TABLE_REGIONS_POST_MERGE_COMMIT_OPERATION = 10;
+  MERGE_TABLE_REGIONS_OPEN_MERGED_REGION = 11;
+  MERGE_TABLE_REGIONS_POST_OPERATION = 12;
+}
+
+message MergeTableRegionsStateData {
+  required UserInformation user_info = 1;
+  repeated RegionInfo region_info = 2;
+  optional RegionInfo merged_region_info = 3;
+  optional bool forcible = 4 [default = false];
 }
 
 message ServerCrashStateData {

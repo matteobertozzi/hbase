@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package org.apache.hadoop.hbase.master.procedure;
+package org.apache.hadoop.hbase.master.assignment;
 
 import java.util.List;
 
@@ -30,6 +30,9 @@ import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.MergeTableRegionsState;
@@ -163,32 +166,6 @@ public class TestMergeTableRegionsProcedure {
   }
 
   @Test(timeout=60000)
-  public void testMergeRegionsTwiceWithSameNonce() throws Exception {
-    final TableName tableName = TableName.valueOf("testMergeRegionsTwiceWithSameNonce");
-    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
-
-    List<HRegionInfo> tableRegions = createTable(tableName);
-
-    HRegionInfo[] regionsToMerge = new HRegionInfo[2];
-    regionsToMerge[0] = tableRegions.get(0);
-    regionsToMerge[1] = tableRegions.get(1);
-
-    long procId1 = procExec.submitProcedure(new MergeTableRegionsProcedure(
-      procExec.getEnvironment(), regionsToMerge, true), nonceGroup, nonce);
-    long procId2 = procExec.submitProcedure(new MergeTableRegionsProcedure(
-      procExec.getEnvironment(), regionsToMerge, true), nonceGroup, nonce);
-    assertEquals(procId1, procId2);
-
-    ProcedureTestingUtility.waitProcedure(procExec, procId1);
-    ProcedureTestingUtility.assertProcNotFailed(procExec, procId1);
-    // The second proc should succeed too - because it is the same proc.
-    ProcedureTestingUtility.waitProcedure(procExec, procId2);
-    ProcedureTestingUtility.assertProcNotFailed(procExec, procId2);
-
-    assertRegionCount(tableName, initialRegionCount - 1);
-  }
-
-  @Test(timeout=60000)
   public void testRecoveryAndDoubleExecution() throws Exception {
     final TableName tableName = TableName.valueOf("testRecoveryAndDoubleExecution");
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -206,8 +183,7 @@ public class TestMergeTableRegionsProcedure {
       new MergeTableRegionsProcedure(procExec.getEnvironment(), regionsToMerge, true));
 
     // Restart the executor and execute the step twice
-    int numberOfSteps = MergeTableRegionsState.values().length;
-    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId, numberOfSteps);
+    MasterProcedureTestingUtility.testRecoveryAndDoubleExecution(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
 
     assertRegionCount(tableName, initialRegionCount - 1);
@@ -231,9 +207,9 @@ public class TestMergeTableRegionsProcedure {
       new MergeTableRegionsProcedure(procExec.getEnvironment(), regionsToMerge, true));
 
     // Failing before MERGE_TABLE_REGIONS_UPDATE_META we should trigger the rollback
-    // NOTE: the 6 (number before MERGE_TABLE_REGIONS_UPDATE_META step) is
+    // NOTE: the 5 (number before MERGE_TABLE_REGIONS_UPDATE_META step) is
     // hardcoded, so you have to look at this test at least once when you add a new step.
-    int numberOfSteps = 6;
+    int numberOfSteps = 5;
     MasterProcedureTestingUtility.testRollbackAndDoubleExecution(procExec, procId, numberOfSteps);
   }
 

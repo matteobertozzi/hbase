@@ -1692,7 +1692,7 @@ public interface MasterObserver extends Coprocessor {
       final String namespace, final Quotas quotas) throws IOException;
 
   /**
-   * Called before dispatching region merge request. 
+   * Called before dispatching region merge request.
    * It can't bypass the default action, e.g., ctx.bypass() won't have effect.
    * @param ctx coprocessor environment
    * @param regionA first region to be merged
@@ -1701,7 +1701,7 @@ public interface MasterObserver extends Coprocessor {
    */
   void preDispatchMerge(final ObserverContext<MasterCoprocessorEnvironment> ctx,
       HRegionInfo regionA, HRegionInfo regionB) throws IOException;
-  
+
   /**
    * called after dispatching the region merge request.
    * @param c coprocessor environment
