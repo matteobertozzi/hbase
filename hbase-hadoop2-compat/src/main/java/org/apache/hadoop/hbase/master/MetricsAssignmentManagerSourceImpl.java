@@ -38,9 +38,6 @@ public class MetricsAssignmentManagerSourceImpl
   private MetricHistogram assignTimeHisto;
   private MetricHistogram unassignTimeHisto;
 
-  private MetricHistogram transitionReportHisto;
-  private MetricHistogram onlineReportTimeHisto;
-
   public MetricsAssignmentManagerSourceImpl() {
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT);
   }
@@ -59,8 +56,6 @@ public class MetricsAssignmentManagerSourceImpl
     ritDurationHisto = metricsRegistry.newTimeHistogram(RIT_DURATION_NAME);
     assignTimeHisto = metricsRegistry.newTimeHistogram(ASSIGN_TIME_NAME);
     unassignTimeHisto = metricsRegistry.newTimeHistogram(UNASSIGN_TIME_NAME);
-    transitionReportHisto = metricsRegistry.newTimeHistogram(TRANSITION_REPORT_TIME_NAME);
-    onlineReportTimeHisto = metricsRegistry.newTimeHistogram(ONLINE_REPORT_TIME_NAME);
   }
 
   @Override
@@ -90,16 +85,6 @@ public class MetricsAssignmentManagerSourceImpl
 
   @Override
   public void updateUnassignTime(final long time) {
-    unassignTimeHisto.add(time);
-  }
-
-  @Override
-  public void updateTransitionReportTime(final long time) {
-    assignTimeHisto.add(time);
-  }
-
-  @Override
-  public void updateOnlineReportTime(final long time) {
     unassignTimeHisto.add(time);
   }
 

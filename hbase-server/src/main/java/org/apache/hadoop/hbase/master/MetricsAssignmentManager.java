@@ -87,12 +87,4 @@ public class MetricsAssignmentManager {
   public void updateUnassignTime(final long time) {
     assignmentManagerSource.updateUnassignTime(time);
   }
-
-  public void updateTransitionReportTime(final long time) {
-    assignmentManagerSource.updateTransitionReportTime(time);
-  }
-
-  public void updateOnlineReportTime(final long time) {
-    assignmentManagerSource.updateOnlineReportTime(time);
-  }
 }

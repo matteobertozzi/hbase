@@ -50,8 +50,6 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
   String OPERATION_COUNT_NAME = "operationCount";
   String ASSIGN_TIME_NAME = "assign";
   String UNASSIGN_TIME_NAME = "unassign";
-  String TRANSITION_REPORT_TIME_NAME = "transitionReport";
-  String ONLINE_REPORT_TIME_NAME = "onlineReport";
 
   /**
    * Set the number of regions in transition.
@@ -90,14 +88,4 @@ public interface MetricsAssignmentManagerSource extends BaseSource {
    * Add the time took to perform the last unassign operation
    */
   void updateUnassignTime(long time);
-
-  /**
-   * Add the time took to perform the last transition report handling
-   */
-  void updateTransitionReportTime(long time);
-
-  /*
-   * Add the time took to perform the last online report handling
-   */
-  void updateOnlineReportTime(long time);
 }

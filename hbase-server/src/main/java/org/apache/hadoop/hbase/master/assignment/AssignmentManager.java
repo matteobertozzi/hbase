@@ -650,7 +650,6 @@ public class AssignmentManager implements ServerListener {
       LOG.warn("failed to transition: " + e.getMessage());
       builder.setErrorMessage("failed to transition: " + e.getMessage());
     }
-    metrics.updateTransitionReportTime(EnvironmentEdgeManager.currentTime() - startTime);
     return builder.build();
   }
 
@@ -780,9 +779,6 @@ public class AssignmentManager implements ServerListener {
 
     // wake report event
     wakeServerReportEvent(serverNode);
-
-    // update metrics
-    metrics.updateOnlineReportTime(EnvironmentEdgeManager.currentTime() - startTime);
   }
 
   public void checkOnlineRegionsReportForMeta(final ServerStateNode serverNode,
